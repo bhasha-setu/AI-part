@@ -1,0 +1,15 @@
+# Target-language config: Hindi (Devanagari). DRAFT PLACEHOLDER.
+# Filler words and tokenisation are NOT reviewed by a native speaker.
+language: hi
+script_notes: "Devanagari, uncased. Combining matras and the virama are kept, and the danda (।) is stripped as punctuation. Edit distance counts code points, so one edit can change a vowel sign. Re-validate typo repair per language."
+status: DRAFT
+tokenisation: whitespace          # Devanagari words are space-separated
+cased: false                      # no upper/lower case: slot values are not title-cased
+apostrophe_variants: []
+contractions: {}
+leading_fillers: ["अं", "उम", "हम्म"]   # placeholder list
+titlecase_slots: []
+typo_min_token_length:
+  value: 4
+  source: "hypothesis: placeholder, unvalidated for Devanagari; edit distance counts code points, so one edit can change a vowel sign"
+  evidence_scope: "none"

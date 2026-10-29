@@ -1,0 +1,30 @@
+# CEFR A1 config. DRAFT: values reviewed as DRAFT only.
+# Every threshold is {value, source, evidence_scope}. The source is one of:
+#   brief:       set by the product brief
+#   research:    justified by a cited study (see docs/reasoning_core.md)
+#   framework:   from docs/Language Learning Product Pedagogy and Interaction Framework.pdf
+#   hypothesis:  a design guess, to be validated by the eval set
+# evidence_scope is EFL when the cited evidence comes from English-as-a-foreign-language
+# learners, general when it spans languages, and none when there is no study behind it.
+cefr: A1
+status: DRAFT
+stage_budgets_seconds:
+  intro: {value: 20, source: "hypothesis", evidence_scope: "none"}
+  model_dialogue: {value: 45, source: "hypothesis", evidence_scope: "none"}
+  useful_language: {value: 45, source: "hypothesis", evidence_scope: "none"}
+  guided_practice: {value: 180, source: "brief: about 3 minutes", evidence_scope: "none"}
+  roleplay: {value: 120, source: "hypothesis", evidence_scope: "none"}
+  assessment: {value: 30, source: "hypothesis", evidence_scope: "none"}
+max_items_per_session: {value: 5, source: "brief: at most 5 items", evidence_scope: "none"}
+max_retries_per_level: {value: 2, source: "brief: max 2 retries per level", evidence_scope: "none"}
+max_stage_attempts: {value: 2, source: "hypothesis: one repeat (2 attempts) per stage; spacing beats massed repeats (C3)", evidence_scope: "none"}
+independent_max_level: {value: 1, source: "brief: independent = solved at hint level 0 or 1", evidence_scope: "none"}
+review_min_level: {value: 2, source: "hypothesis: solved at level 2 or above needs review", evidence_scope: "none"}
+promote_max_level: {value: 1, source: "hypothesis: independent solves promote the Leitner box", evidence_scope: "none"}
+hold_max_level: {value: 2, source: "hypothesis: a level-2 solve keeps the box", evidence_scope: "none"}
+leitner_box_intervals_days:
+  1: {value: 1, source: "hypothesis: spacing direction from Hanson & Brown 2019 (EFL assumed per framework §11, not verified)", evidence_scope: "none"}
+  2: {value: 2, source: "hypothesis", evidence_scope: "none"}
+  3: {value: 4, source: "hypothesis", evidence_scope: "none"}
+  4: {value: 7, source: "hypothesis", evidence_scope: "none"}
+  5: {value: 15, source: "hypothesis", evidence_scope: "none"}

@@ -1,0 +1,48 @@
+# DRAFT PLACEHOLDER — Hindi for English-speaking learners, A1.
+# Exists to prove the core runs a second language with no code change.
+# NOT native-speaker reviewed. Every Hindi line here is a placeholder.
+# The one common_error is labelled PLACEHOLDER and is not a validated judgement.
+scenario:
+  id: introducing_myself_hi
+  title: Introducing yourself in Hindi
+  can_do: "Say your name and where you are from in Hindi."
+  model_dialogue:
+    - {speaker: "A", text: "नमस्ते! आप कैसे हैं?", audio: null}
+    - {speaker: "B", text: "मैं ठीक हूँ। आपका नाम क्या है?", audio: null}
+    - {speaker: "A", text: "मेरा नाम राम है।", audio: null}
+  useful_language:
+    - {phrase: "मेरा नाम ... है", meaning: "My name is ...", used_by: [intro_name_hi]}
+    - {phrase: "मैं ... से हूँ", meaning: "I am from ...", used_by: [intro_place_hi]}
+  items:
+    - id: intro_name_hi
+      scenario: introducing_myself_hi
+      prompt: "Someone asks your name. Say it in Hindi."
+      cue: "Name → ?"
+      first_words: "मेरा नाम…"
+      model_answer: "मेरा नाम {name} है।"
+      accepted:
+        - "मेरा नाम {name} है"
+        - "मैं {name} हूँ"
+      common_errors:
+        # PLACEHOLDER: omitted verb 'है'. Pattern and correction are unvalidated.
+        - id: placeholder_missing_hai
+          pattern: "^मेरा नाम (?P<name>\\S+)$"
+          regex: true
+          verdict: surface_error
+          feedback: "Say: मेरा नाम {name} है।"
+          why: "PLACEHOLDER explanation: a verb is needed here. Not reviewed."
+          example: "मेरा नाम राम"
+          correction_example: "मेरा नाम राम है"
+      follow_up: null
+
+    - id: intro_place_hi
+      scenario: introducing_myself_hi
+      prompt: "Someone asks where you are from. Answer in Hindi."
+      cue: "From → ?"
+      first_words: "मैं…"
+      model_answer: "मैं {place} से हूँ।"
+      accepted:
+        - "मैं {place} से हूँ"
+        - "मैं {place} से हूं"
+      common_errors: []
+      follow_up: null

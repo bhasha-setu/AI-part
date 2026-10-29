@@ -1,0 +1,27 @@
+# Learner-facing strings in English. DRAFT.
+# Used by the English-for-Hindi course: an A1 Hindi learner reads these in English
+# for now. Re-validate once a Hindi UI exists (decision logged in the README).
+language: en
+status: DRAFT
+correct: "Correct!"
+repeat_ok: "Good — now you've said it. Let's keep that one for review."
+hint: "Let's try with a little help."
+retry_prompt: "Now say the correct form: {prompt}"
+repeat_prompt: "Try repeating it: {prompt}"
+lesson_continue: "Continue when you are ready."
+lesson_headings:
+  intro: "What you will be able to do"
+  model_dialogue: "Read the conversation"
+  useful_language: "Useful words and phrases"
+  guided_practice: "Your turn: say it from memory"
+  roleplay: "Real conversation"
+  assessment: "How you did"
+slot_display:
+  name: "[your name]"
+  place: "[your city]"
+  city: "[your city]"
+  job: "[your job]"
+  interest: "[something you like]"
+  item: "[what you want]"
+  verb: "[verb]"
+  subj: "[he/she]"

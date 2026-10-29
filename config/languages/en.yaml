@@ -1,0 +1,33 @@
+# Target-language config: English. DRAFT, seed values, not reviewed by a linguist.
+# Nothing here is code. Contractions, fillers and casing are content, so a new
+# language is a new file, not a code change.
+language: en
+script_notes: "Latin script, cased. Apostrophes inside words are kept for contractions (i'm -> i am). Title-case slot values (name, place)."
+status: DRAFT
+tokenisation: whitespace          # the only mode implemented; others raise ConfigError
+cased: true                       # title-casing of slot values applies
+apostrophe_variants: ["’", "‘", "`"]   # mapped to the canonical "'" before matching
+contractions:
+  "i'm": "i am"
+  "i'd": "i would"
+  "i'll": "i will"
+  "i've": "i have"
+  "don't": "do not"
+  "doesn't": "does not"
+  "can't": "cannot"
+  "won't": "will not"
+  "isn't": "is not"
+  "aren't": "are not"
+  "it's": "it is"
+  "that's": "that is"
+  "what's": "what is"
+  "he's": "he is"
+  "she's": "she is"
+  "you're": "you are"
+  "let's": "let us"
+leading_fillers: [um, uh, umm, uhh, uhm, er, erm, hmm]
+titlecase_slots: [name, place, city, subj]
+typo_min_token_length:
+  value: 4
+  source: "hypothesis: short function words must not act as repair targets"
+  evidence_scope: "none"

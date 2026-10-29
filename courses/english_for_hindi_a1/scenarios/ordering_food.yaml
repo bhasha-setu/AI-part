@@ -1,0 +1,146 @@
+# DRAFT — seed content for guided practice. NOT pedagogically reviewed.
+# Target: Hindi-speaking learners at A1 (CEFR). Scenario: ordering food.
+# Hosts the question word-order, he/she-slip, and "I am agree" (food_agree)
+# error categories, which don't fit the first-person statements in
+# introducing_yourself (see README).
+scenario:
+  id: ordering_food
+  title: Ordering food
+  can_do: "Order food: ask for the menu, agree with a suggestion, ask a price, and describe what someone else eats."
+  # DRAFT dialogue. Not reviewed by a teacher. Audio is null until TTS exists.
+  model_dialogue:
+    - {speaker: "Waiter", text: "Welcome! Here is the menu.", audio: null}
+    - {speaker: "Ravi", text: "Can I have the menu, please?", audio: null}
+    - {speaker: "Waiter", text: "Our masala chai is very good today.", audio: null}
+    - {speaker: "Ravi", text: "Yes, I agree. How much is it?", audio: null}
+    - {speaker: "Waiter", text: "It is forty rupees.", audio: null}
+    - {speaker: "Ravi", text: "My friend is vegetarian. She does not eat meat.", audio: null}
+  useful_language:
+    - {phrase: "Can I have the menu, please?", meaning: "to ask for the menu", used_by: [food_menu]}
+    - {phrase: "I agree.", meaning: "to agree with someone", used_by: [food_agree]}
+    - {phrase: "How much is it?", meaning: "to ask a price", used_by: [food_ask_price]}
+    - {phrase: "She is vegetarian.", meaning: "to describe a woman who does not eat meat", used_by: [food_friend_diet]}
+  items:
+    - id: food_menu
+      scenario: ordering_food
+      prompt: "You sit down at a restaurant. Ask for the menu."
+      cue: "Menu → ? (ask politely)"
+      first_words: "Can I have…"
+      model_answer: "Can I have the menu, please?"
+      accepted:
+        - "can i have the menu please"
+        - "can i have the menu"
+        - "may i have the menu please"
+        - "may i have the menu"
+        - "could i have the menu please"
+        - "could i have the menu"
+        - "can i see the menu please"
+        - "can i see the menu"
+        - "the menu please"
+      common_errors:
+        # Dropped article — missing 'the' before menu.
+        - id: menu_missing_the
+          pattern: "^can i have menu( please)?$"
+          regex: true
+          verdict: surface_error
+          feedback: "Say: Can I have the menu, please? — don't forget 'the'."
+          why: >-
+            There is one menu both of you mean, so English uses 'the':
+            'the menu', not just 'menu'.
+          example: "can i have menu please"
+          correction_example: "can i have the menu please"
+      follow_up: "Of course. What would you like to drink?"
+
+    - id: food_agree
+      scenario: ordering_food
+      prompt: "The waiter says the masala chai here is very good. Agree with him."
+      cue: "Agree → ?"
+      first_words: "I…"
+      model_answer: "I agree."
+      accepted:
+        - "i agree"
+        - "yes i agree"
+        - "i agree with you"
+        - "i think so too"
+        - "yes"               # bare agreement is a correct alternative (see README)
+        - "yes it is"
+        - "yes it is good"
+        - "yes it is very good"
+      common_errors:
+        # Wrong verb form after "I am" — "I am agree" for "I agree".
+        - id: wrong_verb_agree
+          pattern: "^i am agree( with you)?$"
+          regex: true
+          verdict: surface_error
+          feedback: "Say: I agree."
+          why: >-
+            'Agree' is already a verb, so don't put 'am' before it. Say
+            'I agree', not 'I am agree'.
+          example: "i am agree"
+          correction_example: "i agree"
+      follow_up: null
+
+    - id: food_ask_price
+      scenario: ordering_food
+      prompt: "You want to know the price of the coffee. Ask the waiter."
+      cue: "Price → ? (ask a question)"
+      first_words: "How much…"
+      model_answer: "How much is it?"
+      accepted:
+        - "how much is it"
+        - "how much is this"
+        - "how much is the coffee"
+        - "how much does it cost"
+        - "how much does this cost"
+        - "how much does the coffee cost"
+        - "what is the price"
+        - "what does it cost"
+      common_errors:
+        # Question word-order — "How much it is?" for "How much is it?".
+        - id: question_word_order
+          pattern: "how much it is"
+          verdict: surface_error
+          feedback: "Say: How much is it? — the verb 'is' comes before 'it'."
+          why: >-
+            In English questions, the verb moves before the subject:
+            'How much IS it?', not 'How much it is?'.
+          example: "how much it is"
+          correction_example: "how much is it"
+      follow_up: null
+
+    - id: food_friend_diet
+      scenario: ordering_food
+      prompt: "Your friend (a woman) doesn't eat meat. Tell the waiter about her."
+      cue: "Friend → ? (she / no meat)"
+      first_words: "She is…"
+      model_answer: "She is vegetarian."
+      accepted:
+        - "she is vegetarian"
+        - "she is a vegetarian"
+        - "she does not eat meat"       # "doesn't" normalises to "does not"
+        - "my friend is vegetarian"
+        - "my friend is a vegetarian"
+        - "my friend does not eat meat"
+      common_errors:
+        # Gender / pronoun agreement slip — "She are", "He are".
+        - id: he_she_agreement
+          pattern: "^(?P<subj>he|she) are\\b"
+          regex: true
+          verdict: surface_error
+          feedback: "Say: {subj} is vegetarian — use 'is' with he/she."
+          why: >-
+            With 'he' or 'she', use 'is', not 'are': 'She is vegetarian'.
+          example: "she are vegetarian"
+          correction_example: "she is vegetarian"
+        # Gender slip — 'he' for a female friend (the classic Hindi-L1 slip).
+        - id: he_for_she
+          pattern: "^he is (?P<rest>.+)$"
+          regex: true
+          verdict: surface_error
+          feedback: "Say: She is {rest} — your friend is a woman, so use 'she'."
+          why: >-
+            Hindi marks gender on the verb; English marks it on the pronoun.
+            For a woman, use 'she', not 'he'.
+          example: "he is vegetarian"
+          correction_example: "she is vegetarian"
+      follow_up: null

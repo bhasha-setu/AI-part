@@ -1,0 +1,9 @@
+# Course profile: Hindi for English-speaking learners, A1. PLACEHOLDER.
+# Exists to prove the core is language-agnostic. Content is NOT native-reviewed.
+course_id: hindi_for_english_a1
+status: DRAFT
+target_language: hi
+learner_language: en
+cefr_level: A1
+ui_strings: en
+scenarios: [introducing_myself_hi]

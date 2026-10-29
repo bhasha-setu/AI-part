@@ -1,0 +1,8 @@
+# Course profile: English for Hindi-speaking learners, A1. DRAFT.
+course_id: english_for_hindi_a1
+status: DRAFT
+target_language: en
+learner_language: hi
+cefr_level: A1
+ui_strings: en        # DECISION: English instructions for now; no Hindi UI written yet
+scenarios: [introducing_yourself, ordering_food]
