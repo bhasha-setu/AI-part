@@ -18,11 +18,12 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Iterable, TextIO
 
-from guided_practice.config import DEFAULT_COURSE
+from guided_practice.config import DEFAULT_COURSE, PROJECT_ROOT
 from guided_practice.course import load_course
 
 from .adapters import StubLaptopClient, StubSTT, StubTTS
-from .judge import JudgeConfigError, make_judge
+from .judge import JUDGE_KINDS, JudgeConfigError, make_judge
+from .llm import load_dotenv
 from .pipeline import PedagogyServer
 
 QUIT = (":quit", ":q")
@@ -61,11 +62,12 @@ def _stdin_lines(prompt: str):
 
 
 def main(argv=None) -> int:
+    load_dotenv(PROJECT_ROOT / ".env")   # keys only; never printed
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--course", default=DEFAULT_COURSE)
     parser.add_argument("--scenario", default=None, help="defaults to the course's first scenario")
     parser.add_argument("--learner", default="terminal-learner")
-    parser.add_argument("--judge", choices=("stub", "anthropic"), default="stub")
+    parser.add_argument("--judge", choices=JUDGE_KINDS, default="stub")
     parser.add_argument("--state-dir", default=None, help="where logs and learner state go "
                         "(default: a new temp directory)")
     parser.add_argument("--show-frame", action="store_true")

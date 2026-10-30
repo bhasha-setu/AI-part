@@ -103,13 +103,15 @@ def validate_judge_output(raw: str, *, item, level: int, norm: str, ui, strings,
             out.append("correction_not_one_line")
         if len(correction) > cfg.correction_max_chars:
             out.append("correction_too_long")
-        if reveals_target(correction, item, level, ui, already_shown):
+        if reveals_target(correction, item, level, ui, already_shown,
+                          cfg.reveal_accepted_min_tokens):
             out.append("correction_reveals_target")
 
     if (count_sentences(reply, strings.sentence_terminators) > cfg.reply_max_sentences
             or len(reply) > cfg.reply_max_chars):
         out.append("reply_too_long")
-    if verdict != "correct" and reveals_target(reply, item, level, ui, already_shown):
+    if verdict != "correct" and reveals_target(reply, item, level, ui, already_shown,
+                                                 cfg.reveal_accepted_min_tokens):
         out.append("reply_reveals_target")
     if count_markers(reply, strings.correction_markers) + (1 if correction else 0) > 1:
         out.append("too_many_corrections")

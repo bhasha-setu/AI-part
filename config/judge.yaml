@@ -14,6 +14,11 @@ max_tokens: {value: 4000, source: "hypothesis: room for low-effort thinking plus
 timeout_seconds: {value: 15, source: "hypothesis: a spoken turn can't wait longer; on timeout the rule fallback answers", evidence_scope: "none"}
 # The SDK retries timeouts too, so the worst-case wait is timeout x (retries + 1).
 max_retries: {value: 0, source: "hypothesis: no retry inside a spoken turn; a failed call falls back at once", evidence_scope: "none"}
+# Gemini: the default real judge (--judge gemini). The key comes from GEMINI_API_KEY only.
+# Model chosen for latency inside a spoken turn: measured 1.3-1.8 s on 2026-10-30, against
+# 12.8 s for gemini-3.8-flash at thinking level low. Hypothesis: validate with the eval set.
+gemini_model: gemini-3.5-flash-lite
+gemini_thinking_level: ""   # empty = the model's default
 
 # --- validation ----------------------------------------------------------------
 min_confidence: {value: 0.6, source: "hypothesis: below this the verdict is treated as meaning_error", evidence_scope: "none"}
@@ -22,6 +27,9 @@ reply_max_chars: {value: 160, source: "hypothesis: two short spoken sentences", 
 correction_max_chars: {value: 80, source: "hypothesis: one short line", evidence_scope: "none"}
 # Server-side check of the rubric: an exact accepted form is never marked wrong.
 accepted_form_floor: {value: true, source: "brief: never mark an accepted alternative phrasing wrong", evidence_scope: "none"}
+# An accepted alternative of at least this many words, spelled out, counts as revealing
+# the answer (disclosure.py). Shorter ones ("yes", "i agree") occur in ordinary replies.
+reveal_accepted_min_tokens: {value: 3, source: "hypothesis: found live on 2026-10-30, a level-0 recast via an accepted alternative", evidence_scope: "none"}
 
 # --- guardrails ----------------------------------------------------------------
 corrections_per_session: {value: 3, source: "framework: §6 and §4 step 6, limit feedback to 2 or 3 errors per session (3 chosen; hypothesis)", evidence_scope: "none"}

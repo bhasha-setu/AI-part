@@ -18,6 +18,7 @@ import argparse
 import csv
 import json
 import sys
+import time
 from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -25,7 +26,8 @@ from pathlib import Path
 from guided_practice.config import PROJECT_ROOT
 from guided_practice.course import load_course
 
-from .judge import JudgeConfigError, make_judge
+from .judge import JUDGE_KINDS, JudgeConfigError, make_judge
+from .llm import load_dotenv
 from .models import VERDICTS, ServerSession
 from .turn_judge import TurnJudge
 
@@ -75,6 +77,9 @@ class EvalReport:
     fallback_rate: float
     confusion: dict = field(default_factory=dict)
     rejection_counts: dict = field(default_factory=dict)
+    unavailable_reasons: dict = field(default_factory=dict)   # why the judge gave nothing
+    model_rows: int = 0                  # rows the model's own verdict decided
+    model_verdict_agreement: float = 0.0  # agreement on those rows only
     guardrail_counts: dict = field(default_factory=dict)
     disagreements: list = field(default_factory=list)
 
@@ -102,9 +107,13 @@ def _ratio(num: int, den: int) -> float:
     return round(num / den, 4) if den else 0.0
 
 
-def run_eval(rows, judge_kind: str = "stub") -> EvalReport:
+def run_eval(rows, judge_kind: str = "stub", delay: float = 0.0, sleep=time.sleep) -> EvalReport:
+    """``delay`` seconds between rows keeps a rate-limited key (e.g. a free tier) from
+    turning most rows into fallbacks."""
     judges, scenarios, results = {}, {}, []
-    for row in rows:
+    for n, row in enumerate(rows):
+        if delay and n:
+            sleep(delay)
         if row.course_id not in judges:
             course = load_course(row.course_id)
             judges[row.course_id] = TurnJudge(course, make_judge(judge_kind, course))
@@ -139,6 +148,9 @@ def summarise(results, judge_kind: str) -> EvalReport:
         confusion[r.label_verdict][r.verdict] += 1
     rejections = Counter(code.split(":")[0] for r in results for code in r.rejections)
     guards = Counter(a.split(":")[0] for r in results for a in r.guardrail_actions)
+    unavailable = Counter(code.split(":", 1)[1] for r in results for code in r.rejections
+                          if code.startswith("judge_unavailable:"))
+    by_model = [r for r in results if r.source != "fallback"]
     return EvalReport(
         judge=judge_kind, n=n,
         verdict_agreement=_ratio(agree, n),
@@ -148,6 +160,9 @@ def summarise(results, judge_kind: str) -> EvalReport:
         fallback_rate=_ratio(sum(r.source == "fallback" for r in results), n),
         confusion={k: dict(v) for k, v in confusion.items()},
         rejection_counts=dict(rejections),
+        unavailable_reasons=dict(unavailable),
+        model_rows=len(by_model),
+        model_verdict_agreement=_ratio(sum(r.verdict == r.label_verdict for r in by_model), len(by_model)),
         guardrail_counts=dict(guards),
         disagreements=[asdict(r) for r in results if r.verdict != r.label_verdict],
     )
@@ -160,6 +175,8 @@ def format_report(report: EvalReport) -> str:
         f"ladder agreement:   {report.ladder_agreement:.1%}   (meaning_error = off_topic)",
         f"error_id agreement: {report.error_id_agreement:.1%}   over {report.surface_rows} surface_error rows",
         f"fallback rate:      {report.fallback_rate:.1%}",
+        f"model-decided rows: {report.model_rows}, verdict agreement on them: "
+        f"{report.model_verdict_agreement:.1%}",
         "confusion (label -> predicted):",
     ]
     for label in VERDICTS:
@@ -167,6 +184,8 @@ def format_report(report: EvalReport) -> str:
             lines.append(f"  {label:<14} {report.confusion[label]}")
     lines.append(f"rejections: {report.rejection_counts or 'none'}")
     lines.append(f"guardrails: {report.guardrail_counts or 'none'}")
+    if report.unavailable_reasons:
+        lines.append(f"judge unavailable: {report.unavailable_reasons}")
     for d in report.disagreements[:20]:
         lines.append(f"  x {d['row_id']} {d['item_id']}: {d['transcript']!r} "
                      f"label={d['label_verdict']} got={d['verdict']} via {d['source']}")
@@ -174,16 +193,19 @@ def format_report(report: EvalReport) -> str:
 
 
 def main(argv=None) -> int:
+    load_dotenv(PROJECT_ROOT / ".env")   # keys only; never printed
     parser = argparse.ArgumentParser(description="Run eval/answers.csv through the judge path.")
     parser.add_argument("--answers", default=str(DEFAULT_ANSWERS))
-    parser.add_argument("--judge", choices=("stub", "anthropic"), default="stub")
+    parser.add_argument("--judge", choices=JUDGE_KINDS, default="stub")
     parser.add_argument("--limit", type=int, default=None, help="only the first N rows")
     parser.add_argument("--json-out", default=None, help="also write the full report as JSON")
+    parser.add_argument("--delay", type=float, default=0.0,
+                        help="seconds between rows, for rate-limited keys")
     args = parser.parse_args(argv)
 
     rows = load_rows(args.answers)[: args.limit]
     try:
-        report = run_eval(rows, args.judge)
+        report = run_eval(rows, args.judge, delay=args.delay)
     except JudgeConfigError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

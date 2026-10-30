@@ -1,5 +1,7 @@
 pyyaml>=6.0
 pytest>=7.0
-# Optional, only for the real LLM judge (pedagogy_server.judge.AnthropicJudge):
+# The real LLM pieces (judge, generator, roleplay partner) on Gemini; key in .env:
+#   pip install google-genai
+# Optional, only for pedagogy_server.judge.AnthropicJudge:
 #   pip install anthropic
-# Tests and the stub judge do not need it.
+# Tests, the stub judge and --offline need neither.

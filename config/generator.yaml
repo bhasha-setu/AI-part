@@ -1,0 +1,91 @@
+# Scenario generator config. DRAFT.
+# The LLM proposes lesson options and writes scenario content; the server checks every
+# field (pedagogy_server/generator.py) and falls back to authored scenarios when it can't.
+# Every threshold is {value, source, evidence_scope}. Unless the source says "brief" or
+# "framework", each value is a HYPOTHESIS to validate with reviewed generated lessons.
+status: DRAFT
+
+# --- the client ---------------------------------------------------------------------
+# Content is generated once per lesson, off the spoken-turn path. Measured on 2026-10-30
+# for one A1 lesson: gemini-3.8-flash (thinking low) 73 s and once 503/504 twice in a row,
+# gemini-3.7-flash 20 s, gemini-3.5-flash 39 s. Hypothesis: 3.7-flash is good enough;
+# compare content quality with reviewed lessons before changing.
+plan_model: gemini-3.5-flash-lite
+build_model: gemini-3.7-flash
+build_thinking_level: ""
+# Used only when the build model is unavailable (overloaded, timeout), not for content
+# that failed validation.
+build_fallback_model: gemini-3.5-flash
+plan_timeout_seconds: {value: 20, source: "hypothesis: the learner waits on the topic screen", evidence_scope: "none"}
+build_timeout_seconds: {value: 90, source: "hypothesis: one lesson build behind a progress screen", evidence_scope: "none"}
+build_attempts: {value: 2, source: "hypothesis: one retry with the problem list, then fall back to authored content", evidence_scope: "none"}
+
+# --- plan (topic -> options) ----------------------------------------------------------
+min_options: {value: 2, source: "hypothesis: a real choice without overload", evidence_scope: "none"}
+max_options: {value: 3, source: "hypothesis: a real choice without overload", evidence_scope: "none"}
+option_title_max_chars: {value: 60, source: "hypothesis: one line on a phone card", evidence_scope: "none"}
+option_text_max_chars: {value: 200, source: "hypothesis: two short lines on a phone card", evidence_scope: "none"}
+max_preview_phrases: {value: 4, source: "hypothesis", evidence_scope: "none"}
+min_minutes: {value: 3, source: "hypothesis", evidence_scope: "none"}
+max_minutes: {value: 15, source: "hypothesis: the six-stage lesson budget in A1.yaml sums to about 7.5 minutes", evidence_scope: "none"}
+request_max_chars: {value: 300, source: "hypothesis: one spoken or typed sentence about a goal", evidence_scope: "none"}
+option_ttl_seconds: {value: 3600, source: "hypothesis", evidence_scope: "none"}
+
+# --- build (option -> scenario) -------------------------------------------------------
+min_items: {value: 3, source: "hypothesis: enough retrieval for one can-do", evidence_scope: "none"}
+# max_items comes from the level config (max_items_per_session), not from here.
+model_answer_max_words: {value: 10, source: "hypothesis: A1 utterances are short formulaic phrases (framework §3)", evidence_scope: "none"}
+min_accepted: {value: 2, source: "hypothesis: at least the model answer and one natural alternative", evidence_scope: "none"}
+max_accepted: {value: 12, source: "hypothesis", evidence_scope: "none"}
+max_errors_per_item: {value: 2, source: "framework: §6, a few predictable L1-transfer errors, not every possible slip", evidence_scope: "none"}
+max_error_forms: {value: 4, source: "hypothesis", evidence_scope: "none"}
+min_dialogue_lines: {value: 4, source: "hypothesis", evidence_scope: "none"}
+max_dialogue_lines: {value: 10, source: "hypothesis", evidence_scope: "none"}
+text_max_chars: {value: 160, source: "hypothesis: one short line of content", evidence_scope: "none"}
+
+# Which Unicode script each target language's sentences must be written in. A sentence
+# in the wrong script can't be matched by the rules, so it is rejected.
+scripts:
+  en: LATIN
+  hi: DEVANAGARI
+
+# --- prompt text sent to the model -------------------------------------------------
+plan_system_prompt: >-
+  You plan speaking lessons inside a language-learning app built on task-based teaching.
+  The learner tells you, in their own words, what they want to be able to do. Propose
+  options as concrete real-world speaking tasks (can-do statements) at the learner's CEFR
+  level, each a single situation they could meet this week. Prefer an existing scenario
+  when one already fits; set existing_scenario_id to its id, otherwise null. If the
+  request is vague, off-topic or too advanced for the level, still propose the closest
+  useful everyday tasks at the level. Never propose grammar lectures, word lists or
+  translation drills: every option is something the learner will say out loud.
+  Titles and descriptions are in the app's interface language. Return only the JSON
+  object the schema asks for.
+build_system_prompt: >-
+  You write one speaking lesson for a language-learning app. The app runs the lesson:
+  intro, a short model dialogue, useful phrases, guided practice where the learner says
+  each item from memory with a four-step hint ladder (prompt, cue, first words, model
+  answer), a roleplay, and a summary. You write the content only. Rules:
+  (1) Items are what the learner must SAY in the target language to complete the task,
+  each a short natural sentence at the CEFR level. The learner-side speaker in the
+  dialogue says every item's model answer, word for word.
+  (2) prompt describes the situation in the interface language and must NOT contain the
+  answer or its words in order; cue is a shorter nudge (e.g. "Price → ?"); first_words is
+  the first one to three words of model_answer, exactly.
+  (3) accepted lists the natural correct ways to say it: lowercase, no punctuation,
+  contractions written out ("i am", not "i'm"), the model answer included. Be generous:
+  a learner must never be marked wrong for a correct alternative.
+  (4) Use a slot like {name} or {place} only where the learner says their own personal
+  information, in both model_answer and accepted.
+  (5) common_errors are the one or two errors learners with this first language really
+  make on this sentence (first-language transfer). error_forms are the wrong sentences
+  exactly as a learner would say them, lowercase, no punctuation, and none of them may be
+  correct English (or correct target language). correction_example is the corrected
+  form of the first error form and must be one of the accepted forms. feedback is one
+  short line that points at the problem without stating the whole answer; why is one
+  plain sentence for a curious learner.
+  (6) useful_language has one phrase per item; used_by lists that item's id.
+  (7) follow_up is the other speaker's next line after the item, exactly as they would
+  say it to the learner in the target language (no narration such as "The waiter says:"),
+  or null.
+  Return only the JSON object the schema asks for.

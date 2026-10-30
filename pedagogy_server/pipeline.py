@@ -20,11 +20,13 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Optional
 
-from guided_practice.lesson import STAGE_GUIDED_PRACTICE, Lesson
+from guided_practice.lesson import STAGE_GUIDED_PRACTICE, STAGE_ROLEPLAY, Lesson
 from guided_practice.policy import HoldPolicy
+from guided_practice.roleplay import StubRoleplay
 from guided_practice.session import render_prompt
 
 from .config import load_judge_config, load_reply_strings
+from .llm import KEY_VAR as GEMINI_KEY_VAR
 from .models import Frame, LogRecord, Reply, ServerSession, Turn
 from .turn_judge import TurnJudge
 
@@ -48,9 +50,34 @@ class RecordingPolicy:
         return out
 
 
+class RecordingRoleplay:
+    """Wraps the roleplay stage and keeps the live session, so the server can log the
+    partner's per-turn record (source, rejections) after the lesson lets go of it."""
+
+    def __init__(self, inner) -> None:
+        self.inner = inner
+        self.session = None
+
+    def start(self, scenario, learner_id, history):
+        self.session = self.inner.start(scenario, learner_id, history)
+        return self.session
+
+    def last_log(self):
+        log = getattr(self.session, "log", None)
+        return log[-1] if log else None
+
+    @property
+    def transcript(self) -> list:
+        return list(getattr(self.session, "transcript", None) or [])
+
+
+# Every key the server may hold. Their values are scrubbed from the log.
+SECRET_VARS = ("ANTHROPIC_API_KEY", GEMINI_KEY_VAR)
+
+
 class DecisionLogger:
-    """JSON Lines. As a last line of defence, the API key's value (if set in the
-    environment) is replaced before a line is written. Nothing should contain it."""
+    """JSON Lines. As a last line of defence, the API keys' values (if set in the
+    environment) are replaced before a line is written. Nothing should contain them."""
 
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
@@ -58,9 +85,10 @@ class DecisionLogger:
 
     def log(self, record: LogRecord) -> None:
         line = json.dumps(asdict(record), ensure_ascii=False)
-        key = os.environ.get("ANTHROPIC_API_KEY")
-        if key:
-            line = line.replace(key, REDACTED)
+        for var in SECRET_VARS:
+            key = os.environ.get(var)
+            if key:
+                line = line.replace(key, REDACTED)
         with self.path.open("a", encoding="utf-8") as fh:
             fh.write(line + "\n")
 
@@ -75,15 +103,16 @@ class DecisionLogger:
 class PedagogyServer:
     def __init__(self, course, scenario_id: str, learner_id: str, state_dir: str | Path,
                  judge, *, clock=None, policy=None, session_id: Optional[str] = None,
-                 judge_config=None) -> None:
+                 judge_config=None, roleplay=None) -> None:
         self.course = course
         self.state_dir = Path(state_dir)
         self.state_dir.mkdir(parents=True, exist_ok=True)
         self.session_id = session_id or ("srv-" + uuid.uuid4().hex[:8])
         self.policy = RecordingPolicy(policy or HoldPolicy())
+        self.roleplay = RecordingRoleplay(roleplay or StubRoleplay())
         self.lesson = Lesson(course, scenario_id, learner_id, self.state_dir / "learners.json",
                              self.state_dir / "turns.jsonl", clock=clock, policy=self.policy,
-                             lesson_id=self.session_id)
+                             lesson_id=self.session_id, roleplay=self.roleplay)
         self.clock = self.lesson.clock
         self.strings = load_reply_strings(course.ui.code)
         self.turn_judge = TurnJudge(course, judge, judge_config or load_judge_config(), self.strings)
@@ -194,11 +223,18 @@ class PedagogyServer:
             reason = f"{judged.source}: {judged.evaluation.verdict}"
             data = {"frame": asdict(frame), "transcript": transcript, "judge": judged.log_data(),
                     "request": judged.request.to_payload(), "reply": asdict(reply)}
+        elif frame.stage == STAGE_ROLEPLAY and transcript is not None:
+            partner = self.roleplay.last_log()
+            reason = "roleplay: " + (partner["source"] if partner else "no partner record")
+            data = {"frame": asdict(frame), "transcript": transcript, "reply": asdict(reply),
+                    "partner": partner}
         else:
             reason = "no judge call: " + ("start" if transcript is None else
                                           "continue" if frame.expects == "continue" else
-                                          "follow-up or roleplay")
+                                          "follow-up")
             data = {"frame": asdict(frame), "transcript": transcript, "reply": asdict(reply)}
+        if frame.stage != STAGE_ROLEPLAY and view.stage == STAGE_ROLEPLAY and self.roleplay.last_log():
+            data["partner"] = self.roleplay.last_log()   # this turn opened the roleplay
         self._record("turn", frame.stage, reason, data)
 
         if view.expects in ("done", "held"):

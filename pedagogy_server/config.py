@@ -41,6 +41,9 @@ class JudgeConfig:
     rubric: str
     constraints: tuple
     learner_language_rule: dict
+    gemini_model: str = ""
+    reveal_accepted_min_tokens: int = 0
+    gemini_thinking_level: str = ""
 
 
 @dataclass(frozen=True)
@@ -97,6 +100,9 @@ def load_judge_config(path: str | Path | None = None) -> JudgeConfig:
         rubric=v["rubric"],
         constraints=tuple(v["constraints"]),
         learner_language_rule=dict(v["learner_language_rule"]),
+        gemini_model=v.get("gemini_model", ""),
+        reveal_accepted_min_tokens=v.get("reveal_accepted_min_tokens", 0),
+        gemini_thinking_level=v.get("gemini_thinking_level") or "",
     )
 
 

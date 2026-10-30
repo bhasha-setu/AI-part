@@ -3,7 +3,9 @@
     LLMJudge        protocol: judge(JudgeRequest) -> raw text. Raises JudgeUnavailable.
     StubJudge       deterministic, rule-backed. The default, and what tests and CI use.
     ScriptedJudge   returns queued outputs, for testing rejections and fallbacks.
-    AnthropicJudge  the real client. Needs ANTHROPIC_API_KEY in the environment and the
+    GeminiJudge     a real client, through the provider-neutral llm.JSONModel seam.
+                    Needs GEMINI_API_KEY and ``google-genai``. Never called in tests.
+    AnthropicJudge  a real client. Needs ANTHROPIC_API_KEY in the environment and the
                     ``anthropic`` package. Never called in tests.
 
 This is a different seam from ``guided_practice.evaluator.LLMJudge``, which the rule
@@ -63,11 +65,12 @@ class StubJudge:
 
     name = "stub"
 
-    def __init__(self, course, strings=None) -> None:
-        from .config import load_reply_strings
+    def __init__(self, course, strings=None, cfg=None) -> None:
+        from .config import load_judge_config, load_reply_strings
 
         self.course = course
         self.strings = strings or load_reply_strings(course.ui.code)
+        self.cfg = cfg or load_judge_config()
         self.rules = RuleEvaluator()
         self.calls: list = []
         self._scenarios: dict = {}
@@ -85,7 +88,8 @@ class StubJudge:
         if ev.verdict == Verdict.SURFACE_ERROR:
             error_id = ev.matched_error_id or None
             if ev.feedback and not reveals_target(ev.feedback, item, request.hint_level,
-                                                  self.course.ui, request.shown_to_learner):
+                                                  self.course.ui, request.shown_to_learner,
+                                                  self.cfg.reveal_accepted_min_tokens):
                 correction = ev.feedback
         rule_decisive = ev.verdict in (Verdict.CORRECT, Verdict.SURFACE_ERROR, Verdict.OFF_TOPIC)
         return json.dumps({
@@ -178,12 +182,50 @@ class AnthropicJudge:
         return text
 
 
+class GeminiJudge:
+    """The real judge on any ``llm.JSONModel`` (Gemini by default). Same request, same
+    schema and same server-side validation as AnthropicJudge."""
+
+    name = "gemini"
+
+    def __init__(self, cfg, model=None) -> None:
+        self.cfg = cfg
+        if model is None:
+            from .llm import GeminiModel, LLMConfigError
+
+            try:
+                model = GeminiModel(cfg.gemini_model, thinking_level=cfg.gemini_thinking_level or None,
+                                    timeout_seconds=cfg.timeout_seconds)
+            except LLMConfigError as exc:
+                raise JudgeConfigError(str(exc)) from exc
+        self._model = model
+
+    def __repr__(self) -> str:
+        return f"GeminiJudge({self._model!r})"
+
+    def judge(self, request: JudgeRequest) -> str:
+        from .llm import LLMUnavailable
+
+        try:
+            return self._model.generate_json(
+                system=self.cfg.system_prompt,
+                user=json.dumps(request.to_payload(), ensure_ascii=False),
+                schema=JUDGE_RESPONSE_SCHEMA)
+        except LLMUnavailable as exc:
+            raise JudgeUnavailable(str(exc)) from exc
+
+
+JUDGE_KINDS = ("stub", "gemini", "anthropic")
+
+
 def make_judge(kind: str, course, cfg=None):
-    """``stub`` (default) or ``anthropic``."""
+    """``stub`` (default), ``gemini`` or ``anthropic``."""
     from .config import load_judge_config
 
     if kind == "stub":
-        return StubJudge(course)
+        return StubJudge(course, cfg=cfg)
+    if kind == "gemini":
+        return GeminiJudge(cfg or load_judge_config())
     if kind == "anthropic":
         return AnthropicJudge(cfg or load_judge_config())
-    raise ValueError(f"unknown judge '{kind}' (expected stub or anthropic)")
+    raise ValueError(f"unknown judge '{kind}' (expected one of {', '.join(JUDGE_KINDS)})")

@@ -67,7 +67,8 @@ def apply_guardrails(cand: Candidate, *, item, norm: str, level: int, ui, string
                 actions.append(f"already_corrected:{cand.error_id}")
         if state.corrections_used >= cfg.corrections_per_session:
             actions.append("correction_cap_reached")
-        if reveals_target(correction_text, item, level, ui, already_shown):
+        if reveals_target(correction_text, item, level, ui, already_shown,
+                          cfg.reveal_accepted_min_tokens):
             actions.append("early_reveal")
 
     fallback_line = strings.encourage if cand.verdict == SURFACE else strings.guided(cand.verdict, level)
@@ -76,7 +77,8 @@ def apply_guardrails(cand: Candidate, *, item, norm: str, level: int, ui, string
     else:
         feedback = _join(cand.reply, cand.correction or "") or fallback_line
         shown = correction_text or None
-        if cand.verdict != CORRECT and reveals_target(feedback, item, level, ui, already_shown):
+        if cand.verdict != CORRECT and reveals_target(feedback, item, level, ui, already_shown,
+                                                        cfg.reveal_accepted_min_tokens):
             actions.append("early_reveal")
             feedback, shown = fallback_line, None
 

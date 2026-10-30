@@ -147,3 +147,31 @@ def test_low_confidence_is_flagged_not_rejected():
     result = check(with_(confidence=CFG.min_confidence - 0.1))
     assert result.ok
     assert result.low_confidence
+
+
+# --- an accepted alternative spelled out is a reveal too (found live, 2026-10-30) ---
+
+FOOD = COURSE.load_scenario("ordering_food")
+
+
+def check_food(resp, item_id, level=0, transcript="can i have menu please"):
+    return validate_judge_output(
+        json.dumps(resp), item=FOOD.item_by_id(item_id), level=level,
+        norm=normalise(transcript, COURSE.lang), ui=COURSE.ui, strings=STRINGS, cfg=CFG,
+    )
+
+
+def test_a_recast_through_an_accepted_alternative_is_rejected_at_level_0():
+    resp = {"verdict": "surface_error", "error_id": "menu_missing_the",
+            "correction": "Say: May I have the menu, please?", "reply": "Nearly.",
+            "confidence": 0.9}
+    assert "correction_reveals_target" in check_food(resp, "food_menu").rejections
+    # At the last rung the model answer is on screen, so nothing reveals more.
+    assert check_food(resp, "food_menu", level=3).ok
+
+
+def test_a_short_accepted_form_in_an_ordinary_reply_is_not_a_reveal():
+    # "yes" is an accepted answer to food_agree; a reply may still say it.
+    resp = {"verdict": "meaning_error", "error_id": None, "correction": None,
+            "reply": "Yes, try once more.", "confidence": 0.9}
+    assert check_food(resp, "food_agree", transcript="chai").ok

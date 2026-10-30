@@ -9,6 +9,6 @@ SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DST="$(mktemp -d)"
 trap 'rm -rf "$DST"' EXIT
 
-cp -R "$SRC/guided_practice" "$SRC/config" "$SRC/courses" "$SRC/tests" "$SRC/samples" "$SRC/pytest.ini" "$DST/"
+cp -R "$SRC/guided_practice" "$SRC/pedagogy_server" "$SRC/eval" "$SRC/scripts" "$SRC/config" "$SRC/courses" "$SRC/tests" "$SRC/samples" "$SRC/pytest.ini" "$DST/"
 cd "$DST"
 python3 -m pytest "$@"

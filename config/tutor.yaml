@@ -1,0 +1,126 @@
+# The conversational tutor (tutor/). DRAFT.
+# The server owns the structure: phase, which phrase comes next, hint level, turn caps,
+# the review cap, spaced review and the learner's support stage. The LLM owns the words:
+# the verdict, the reply, and bridging from Hindi to English. Numbers are hypotheses.
+status: DRAFT
+
+model: gemini-3.5-flash-lite
+thinking_level: ""
+timeout_seconds: {value: 20, source: "hypothesis: a learner waits for one reply", evidence_scope: "none"}
+max_output_tokens: {value: 800, source: "hypothesis: room for one short JSON reply", evidence_scope: "none"}
+# A reply that breaks a rule (reveals the answer too early) is retried once with the
+# reason. If the retry breaks it too, the revealed words are masked, not the whole reply.
+retries_per_turn: {value: 1, source: "hypothesis: one retry keeps latency and free-tier quota in check", evidence_scope: "none"}
+
+# How Hindi is written in tutor replies: "roman" (Hinglish, easy to read and type) or
+# "devanagari" (much better for hi-IN text-to-speech).
+hindi_script: roman
+
+# --- support stages: the Hindi -> English transition --------------------------------
+# A learner starts at start_stage and moves one stage at a time after each lesson.
+start_stage: {value: 2, source: "brief: learners are between beginner and intermediate", evidence_scope: "none"}
+stages:
+  - name: hindi_first
+    rule: >-
+      Explain and instruct in Hindi. Use English only for the English phrases being
+      learned. Every English phrase you teach gets its Hindi meaning.
+  - name: bilingual
+    rule: >-
+      Give instructions in very simple English, then repeat the key part in Hindi.
+      Explain the 'why' of a mistake in Hindi.
+  - name: english_with_hindi_help
+    rule: >-
+      Speak simple English. Use one short Hindi sentence only to explain the 'why' of a
+      mistake, when the learner is stuck (hint level 2 or more), or when the learner
+      spoke Hindi.
+  - name: english_only
+    rule: >-
+      Speak only simple English. If the learner speaks Hindi, answer in English and ask
+      them to try in English. Use Hindi only if the learner asks for it.
+# After a lesson: move up when the learner did most items from memory without Hindi;
+# move down when they needed a lot of help.
+promote_min_from_memory: {value: 0.75, source: "hypothesis", evidence_scope: "none"}
+promote_max_hindi_turns: {value: 0, source: "hypothesis", evidence_scope: "none"}
+demote_max_from_memory: {value: 0.4, source: "hypothesis", evidence_scope: "none"}
+demote_min_hindi_turns: {value: 3, source: "hypothesis", evidence_scope: "none"}
+
+# --- the lesson -----------------------------------------------------------------------
+# Hint levels per phrase: 0 situation only, 1 cue, 2 first words, 3 full sentence.
+# A wrong answer at level 3 ends the phrase (it comes back in spaced review).
+# Hindi answers jump to at least this level at stages that bridge from Hindi.
+hindi_bridge_level: {value: 2, source: "hypothesis: the learner knows the meaning, so give the English frame", evidence_scope: "none"}
+converse_min_turns: {value: 2, source: "hypothesis", evidence_scope: "none"}
+converse_max_turns: {value: 5, source: "hypothesis: a short first conversation", evidence_scope: "none"}
+# Errors shown in the review after the conversation (framework §4 step 6, §6).
+review_max_errors: {value: 3, source: "framework: §6, show only the 2 or 3 most important errors", evidence_scope: "EFL"}
+learner_text_max_chars: {value: 400, source: "hypothesis: learner text is untrusted data sent to the model", evidence_scope: "none"}
+
+# --- prompt text --------------------------------------------------------------------
+system_prompt: |-
+  You are a friendly English tutor inside a speaking app for Hindi speakers. Your
+  learners already know some English (between beginner and intermediate) but make typical
+  Hindi-speaker mistakes and freeze when they have to speak. They talk to you by voice or
+  by typing, in English, Hindi or a mix.
+
+  How you teach:
+  - Be warm, short and specific. Speak to the learner directly.
+  - A Hindi or mixed answer is NOT a mistake. It shows the learner knows the meaning.
+    Say what they meant is right, then help them say it in English, as far as the hint
+    level allows.
+  - Prompts before answers. When an English answer has a mistake, point at the problem
+    (which word is missing, which part is wrong) and let the learner fix it. Say the
+    corrected sentence only when the request's hint level allows it.
+  - Never mark a correct alternative wrong. Ignore capitals, punctuation and small
+    speech-recognition slips: the input may be a speech transcript.
+  - Deal with one mistake per turn, the most important one: a missing am/is/are, word
+    order and verb tense first; articles (a/an/the) and prepositions after.
+  - No grammar lectures. A 'why' is one plain sentence, often comparing with Hindi
+    (for example: Hindi puts 'hai' at the end, English puts 'is' in the middle).
+  - Never ask the learner something they already told you.
+  - The app runs the lesson. The request tells you the phase, what to do next and the
+    hint level. Follow it exactly; do not skip ahead or invent other tasks.
+
+  Language: follow the support-stage rule in the request. Write English segments with
+  lang "en" and Hindi segments with lang "hi". {script_rule}
+  At most two short English sentences and one short Hindi sentence per turn, except the
+  lesson intro.
+  Return only the JSON object the schema asks for.
+script_rule:
+  roman: "Write Hindi in Roman letters (Hinglish), e.g. 'Bahut badhiya! Ek word missing hai.'"
+  devanagari: "Write Hindi in Devanagari, e.g. 'बहुत बढ़िया! एक शब्द छूट गया है।'"
+
+# --- fixed lines --------------------------------------------------------------------
+# Used for the review prompts (always), and for everything else when the model is
+# offline or unavailable. {placeholders} are filled by the server. Hindi lines are
+# DRAFT, not reviewed by a native speaker.
+lines:
+  intro_en: "Today: {can_do} Useful phrases: {phrases}."
+  intro_hi:
+    roman: "Aaj hum yeh bolna seekhenge. Galti ho toh koi baat nahi."
+    devanagari: "आज हम यह बोलना सीखेंगे। ग़लती हो तो कोई बात नहीं।"
+  correct_en: "Correct!"
+  hint_en:
+    0: "Almost. Something is not quite right. Try again: {prompt}"
+    1: "Here is a clue: {cue} Try again."
+    2: "Start like this: {first_words}"
+    3: "Say: {model} Now you say it."
+  hint_hi:
+    roman: "Koi baat nahi, phir se try karo."
+    devanagari: "कोई बात नहीं, फिर से कोशिश करो।"
+  bridge_hi:
+    roman: "Matlab bilkul sahi hai! Ab English mein bolo."
+    devanagari: "मतलब बिल्कुल सही है! अब इंग्लिश में बोलो।"
+  try_english_en: "Good. Now try to say it in English."
+  give_up_en: "The sentence is: {model}. We will practise it again later."
+  question_en: "Good question. Let's keep going: {prompt}"
+  converse_start_en: "Now let's have a real conversation. I am {partner}."
+  converse_end_en: "It was nice talking to you. Goodbye!"
+  review_start_en: "Great talk! Now let's make a few of your sentences even better."
+  review_none_en: "Great talk! I didn't hear any important mistakes."
+  review_prompt_en: "You said: \"{said}\". Can you make it better?"
+  review_prompt_hi:
+    roman: "Ek chhoti si galti hai. Khud theek karke dekho."
+    devanagari: "एक छोटी सी ग़लती है। ख़ुद ठीक करके देखो।"
+  review_fixed_en: "Yes! \"{fixed}\"."
+  review_answer_en: "We say: \"{fixed}\"."
+  done_en: "That's the end of the lesson. Well done!"
