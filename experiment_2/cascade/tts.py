@@ -149,6 +149,40 @@ class ElevenLabsTTS:
         return first
 
 
+class FallbackTTS:
+    """A cloud engine with a local backup. If the primary fails (no credits, a voice the
+    plan can't use, no network), the reason is printed once and the backup speaks from
+    then on, so a conversation never crashes or goes silent over a TTS error."""
+    splits_by_script = False   # the primary takes mixed text; the backup splits it itself
+
+    def __init__(self, primary: TTS, backup: TTS, warn=print) -> None:
+        self.primary, self.backup, self.warn = primary, backup, warn
+        self.failed: Optional[str] = None
+
+    @property
+    def name(self) -> str:
+        return self.backup.name + " (fallback)" if self.failed else f"{self.primary.name} > {self.backup.name}"
+
+    def _backup(self, text: str, play: bool) -> Optional[float]:
+        from .llm import split_by_script
+
+        first = None
+        for seg in split_by_script(text) if self.backup.splits_by_script else [None]:
+            lang, chunk = (seg.language, seg.text) if seg else ("mixed", text)
+            started = self.backup.speak(chunk, lang, play=play)
+            first = started if first is None else first
+        return first
+
+    def speak(self, text: str, language: str, play: bool = True) -> Optional[float]:
+        if self.failed is None:
+            try:
+                return self.primary.speak(text, language, play=play)
+            except Exception as exc:   # HTTP 402/401/429, network: all mean "use the backup"
+                self.failed = str(exc)[:200]
+                self.warn(f"[{self.primary.name} failed, switching to {self.backup.name}: {self.failed}]")
+        return self._backup(text, play)
+
+
 class SilentTTS:
     name = "silent"
     splits_by_script = True
@@ -164,7 +198,9 @@ def load_tts(cfg: dict, env: dict) -> TTS:
         key = env.get(e.get("key_env", "ELEVENLABS_API_KEY"))
         if not key:
             raise RuntimeError("ELEVENLABS_API_KEY is not set in the repo-root .env")
-        return ElevenLabsTTS(key, e["voice_id"], e.get("model", "eleven_flash_v2_5"))
+        voice_id = env.get(e.get("voice_id_env", "")) or e["voice_id"]
+        primary = ElevenLabsTTS(key, voice_id.strip(), e.get("model", "eleven_flash_v2_5"))
+        return FallbackTTS(primary, load_tts(dict(cfg, engine="macos-native"), env))
     voices, rate = cfg["voices"], cfg.get("rate", 175)
     if engine == "macos-native":
         try:

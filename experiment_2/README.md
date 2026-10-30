@@ -9,16 +9,18 @@ mic (push-to-talk) → Whisper on the Apple GPU (STT) → Gemini / NVIDIA (LLM, 
 
 ## Run
 
-From this folder, with the repo-root `.venv` active and keys in the repo-root `.env`:
+From this folder, with keys in the repo-root `.env`. Activate the project venv first:
+outside it, `mlx-whisper` is missing and STT falls back to the slow CPU engine.
 
 ```bash
+source ../.venv/bin/activate              # once per terminal (or use ../.venv/bin/python)
 python -m cascade.cli                     # voice -> voice (Enter to start, Enter to stop)
 python -m cascade.cli --text              # text  -> voice
 python -m cascade.cli --no-tts            # voice -> text
 python -m cascade.cli --text --no-tts     # text  -> text
 python -m cascade.cli --wav a.wav b.wav   # one turn per file, for repeatable runs
 python -m cascade.cli --offline           # echo instead of an LLM, no network
-python -m cascade.cli --tts elevenlabs    # override config.yaml's engines
+python -m cascade.cli --tts elevenlabs    # ElevenLabs voice; macOS voices take over if it fails
 python -m cascade.cli --whisper-model small
 python -m cascade.cli --keep-audio        # save mic input under runs/
 python -m pytest                          # offline tests
@@ -29,12 +31,14 @@ Keys (`.env` at the repo root; numbered extras such as `GEMINI_API_KEY_2` are pi
 | Variable | Used for |
 |---|---|
 | `GEMINI_API_KEY` | LLM, first choice |
-| `NVIDIA_API_KEY` | LLM fallback (build.nvidia.com, OpenAI-compatible) |
-| `ELEVENLABS_API_KEY` | `--tts elevenlabs` |
+| `GEMINI_API_KEY_2` | LLM, second (a key from a different account has its own quota) |
+| `NVIDIA_API_KEY` | LLM, last fallback (build.nvidia.com, OpenAI-compatible) |
+| `ELEVENLABS_API_KEY` | `--tts elevenlabs` (needs the Text to Speech permission) |
 
-The chain exists mainly to fall back to a *different provider*. Gemini quotas are per
-Google Cloud project, so several keys from one project share one quota; creating extra
-projects just to get around free-tier limits may break Google's terms.
+The LLMs are tried in that order. One that fails (429, timeout) answers nothing that turn,
+the next one does, and the failed one is skipped for 60 s. Gemini quotas are per Google
+Cloud project, so keys from one project share one quota; creating extra projects just to
+get around free-tier limits may break Google's terms.
 
 The first mic run triggers a macOS microphone permission prompt. The first load of a
 Whisper model downloads it (large-v3-turbo is about 1.6 GB).
@@ -49,6 +53,25 @@ Whisper model downloads it (large-v3-turbo is about 1.6 GB).
 
 `pipeline.py` speaks each sentence as soon as the LLM produces it, times the turn on the
 wall clock, keeps the chat history, and speaks a fallback line if no LLM can answer.
+
+## Provider notes (tested 2026-10-30)
+
+**NVIDIA free endpoints.** `nemotron-3.5-lightning-30b-a3b` with thinking off
+(`chat_template_kwargs: {enable_thinking: false}` in `config.yaml`) is the fallback:
+~0.65 s when idle, but one call took 11 s, so it stays last. With thinking on it spends all
+300 tokens reasoning and returns nothing. `nemotron-3.5-bolt-e4b` was as fast but dropped
+punctuation. `gemma-4-31b-it` and `deepseek-v4.1-flash` timed out after 90 s. The Llama
+models with free endpoints are safety and vision models, not chat models. Your key's model
+list: `python -m cascade.bench --list-nvidia-models`.
+
+**ElevenLabs (free plan).** Flash v2.5 starts audio in ~180-300 ms (the first request of a
+session ~4 s, opening the connection) and reads mixed Hindi/English in one call. Only
+built-in *Default* voices work through the API on the free plan; Voice Library voices
+get HTTP 402 `paid_plan_required`. The config uses George (Default, English accent); to
+use your own voice on a paid plan, uncomment `voice_id_env` in `config.yaml`. A reply
+costs ~50 credits (0.5 per character), so 10k credits a month is roughly 180 replies:
+the free macOS voices stay the default. If ElevenLabs fails mid-conversation, the error
+is printed once and the macOS voices speak from then on.
 
 ## Measurements
 
@@ -92,9 +115,9 @@ noise) may rank the models differently. Record a few clips with `--keep-audio`, 
 ## Next
 
 - Benchmark real learner clips (English, Hindi, Hinglish).
-- Add the ElevenLabs and NVIDIA keys, then benchmark `--tts elevenlabs` and the NVIDIA
-  fallback. Pick an ElevenLabs voice (`tts.elevenlabs.voice_id`); the configured one is a
-  placeholder.
+- Compare voice quality: macOS Rishi/Lekha vs ElevenLabs George, with learners.
+- Try ElevenLabs Scribe (speech to text; the key has the permission) on mixed
+  Hindi-English clips, where Whisper writes English words in Devanagari.
 - Transcribe while the learner is still talking (chunked STT), so only the last chunk
   is left when they stop: the next big cut after this one.
 - Swap the LLM stage for experiment_1's tutor (`ChatLLM.stream(history, text)` yields

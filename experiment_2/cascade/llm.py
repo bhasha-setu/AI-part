@@ -156,7 +156,7 @@ class OpenAICompatChat:
     def __init__(self, model: str, system_prompt: str, *, api_key: str, base_url: str,
                  label: str = "openai-compat", timeout_seconds: float = 15,
                  max_output_tokens: int = 300, temperature: float = 0.6,
-                 transport=None) -> None:
+                 extra_body: Optional[dict] = None, transport=None) -> None:
         import httpx
 
         self.model = model
@@ -164,6 +164,7 @@ class OpenAICompatChat:
         self.system_prompt = system_prompt
         self.max_output_tokens = max_output_tokens
         self.temperature = temperature
+        self.extra_body = extra_body or {}   # provider-specific, e.g. turning thinking off
         self._client = httpx.Client(base_url=base_url.rstrip("/"), timeout=timeout_seconds,
                                     headers={"Authorization": f"Bearer {api_key}"},
                                     transport=transport)
@@ -174,7 +175,8 @@ class OpenAICompatChat:
                       "content": h["text"]} for h in history]
         messages.append({"role": "user", "content": text})
         body = {"model": self.model, "messages": messages, "stream": True,
-                "max_tokens": self.max_output_tokens, "temperature": self.temperature}
+                "max_tokens": self.max_output_tokens, "temperature": self.temperature,
+                **self.extra_body}
         try:
             with self._client.stream("POST", "/chat/completions", json=body) as response:
                 if response.status_code != 200:
@@ -282,7 +284,8 @@ def build_chain(cfg: dict, env=None) -> ProviderChain:
                                                  base_url=p["base_url"],
                                                  label=f"{p.get('label', 'openai')}[{label}]",
                                                  timeout_seconds=timeout,
-                                                 max_output_tokens=max_tokens))
+                                                 max_output_tokens=max_tokens,
+                                                 extra_body=p.get("extra_body")))
             else:
                 raise ValueError(f"unknown provider type {p['type']!r}")
     if not backends:

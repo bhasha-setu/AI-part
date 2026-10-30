@@ -190,7 +190,14 @@ def load_stt(cfg: dict, *, override_model: Optional[str] = None,
             return MLXWhisperSTT(model, languages=languages, detect_model=cfg.get("detect_model"),
                                  vad=cfg.get("vad_filter", True))
         except ImportError:
-            print("mlx-whisper not available; falling back to faster-whisper on CPU")
+            # Usually the project venv isn't active. Say so, and don't start a large
+            # download for the CPU engine: use its small model (~2.5 s per turn) instead.
+            import sys
+
+            print(f"mlx-whisper is not installed for {sys.executable}.\n"
+                  "  Is the project venv active? (source ../.venv/bin/activate)\n"
+                  "  Falling back to faster-whisper 'small' on CPU (slower).")
+            model = override_model or cfg.get("cpu_fallback_model", "small")
     return WhisperSTT(model, device=cfg.get("device", "cpu"),
                       compute_type=cfg.get("compute_type", "int8"), languages=languages,
                       beam_size=cfg.get("beam_size", 1), vad_filter=cfg.get("vad_filter", True))

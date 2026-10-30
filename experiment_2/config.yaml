@@ -26,7 +26,11 @@ llm:
       label: nvidia
       key_env: NVIDIA_API_KEY
       base_url: https://integrate.api.nvidia.com/v1
-      model: meta/llama-3.1-8b-instruct   # check what your key can use: python -m cascade.bench --list-nvidia-models
+      model: nvidia/nemotron-3.5-lightning-30b-a3b   # ~0.65 s with thinking off (2026-10-30)
+      extra_body:                    # with thinking on it spends all 300 tokens reasoning
+        chat_template_kwargs: {enable_thinking: false}
+      # Also tried on the free endpoints: nemotron-3.5-bolt-e4b (~0.7 s, drops punctuation);
+      # gemma-4-31b-it and deepseek-v4.1-flash timed out after 90 s (queued).
   cooldown_seconds: 60
   timeout_seconds: 15
   max_output_tokens: 300
@@ -54,4 +58,6 @@ tts:
   elevenlabs:
     key_env: ELEVENLABS_API_KEY
     model: eleven_flash_v2_5      # lowest-latency model, 0.5 credit/char, supports Hindi
-    voice_id: JBFqnCBsd6RMkjVDRZzb   # placeholder premade voice; pick one in the ElevenLabs voice library
+    voice_id: JBFqnCBsd6RMkjVDRZzb   # George, a built-in Default voice (works on the free plan)
+    # voice_id_env: ELEVENLABS_API_KEY_Voice_id   # read the voice from .env instead. Free plan:
+    #                                             # Default voices only; Library voices get HTTP 402.

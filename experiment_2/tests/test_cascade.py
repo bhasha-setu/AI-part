@@ -209,10 +209,12 @@ def test_openai_compat_streams_sse():
         return httpx.Response(200, text=_sse("Hi Ra", "vi. Where", " from?"))
 
     llm = OpenAICompatChat("x", "sys", api_key="k", base_url="http://n/v1",
+                           extra_body={"chat_template_kwargs": {"enable_thinking": False}},
                            transport=httpx.MockTransport(handler))
     assert list(llm.stream([{"role": "model", "text": "b"}], "c")) == ["Hi Ravi.", "Where from?"]
     assert seen["auth"] == "Bearer k"
     assert [m["role"] for m in seen["body"]["messages"]] == ["system", "assistant", "user"]
+    assert seen["body"]["chat_template_kwargs"] == {"enable_thinking": False}
 
 
 def test_openai_compat_429_and_truncation_are_unavailable():
@@ -262,3 +264,31 @@ def test_vad_returns_nothing_for_silence_and_noise():
     noise = (np.random.default_rng(0).standard_normal(32000) * 0.01).astype(np.float32)
     assert len(trim_to_speech(np.zeros(32000, np.float32))) == 0
     assert len(trim_to_speech(noise)) == 0
+
+
+def test_elevenlabs_voice_id_from_env_with_config_fallback():
+    from cascade.tts import load_tts
+
+    cfg = {"engine": "elevenlabs", "elevenlabs": {"voice_id_env": "VOICE", "voice_id": "fallback"}}
+    cfg = dict(cfg, voices={"en": "Rishi", "hi": "Lekha"}, rate=175)
+    assert load_tts(cfg, {"ELEVENLABS_API_KEY": "k", "VOICE": " chosen "}).primary.voice_id == "chosen"
+    assert load_tts(cfg, {"ELEVENLABS_API_KEY": "k"}).primary.voice_id == "fallback"
+
+
+def test_tts_falls_back_once_and_splits_for_backup():
+    from cascade.tts import FallbackTTS
+
+    class Broken:
+        name, splits_by_script, calls = "cloud", False, 0
+
+        def speak(self, text, language, play=True):
+            Broken.calls += 1
+            raise RuntimeError("ElevenLabs HTTP 402: paid_plan_required")
+
+    backup, warnings = RecordingTTS(), []
+    tts = FallbackTTS(Broken(), backup, warn=warnings.append)
+    pipe = CascadePipeline(TypedSTT(), ScriptedLLM("Nice! मुझे चाय पसंद है। Bye."), tts)
+    result = pipe.turn("hi")
+    assert backup.spoken == [("en", "Nice!"), ("hi", "मुझे चाय पसंद है।"), ("en", "Bye.")]
+    assert Broken.calls == 1 and len(warnings) == 1 and "402" in warnings[0]
+    assert result.timing.first_audio_ms is not None and "fallback" in tts.name
