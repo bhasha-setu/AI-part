@@ -14,6 +14,9 @@ outside it, `mlx-whisper` is missing and STT falls back to the slow CPU engine.
 
 ```bash
 source ../.venv/bin/activate              # once per terminal (or use ../.venv/bin/python)
+python -m cascade.cli --tutor             # a voice lesson with the experiment_1 tutor
+python -m cascade.cli --tutor --text      # the same lesson, typed
+python -m cascade.cli --tutor --scenario ordering_food --stage 0   # another lesson, Hindi first
 python -m cascade.cli                     # voice -> voice (Enter to start, Enter to stop)
 python -m cascade.cli --text              # text  -> voice
 python -m cascade.cli --no-tts            # voice -> text
@@ -53,6 +56,31 @@ Whisper model downloads it (large-v3-turbo is about 1.6 GB).
 
 `pipeline.py` speaks each sentence as soon as the LLM produces it, times the turn on the
 wall clock, keeps the chat history, and speaks a fallback line if no LLM can answer.
+
+## Tutor mode (`--tutor`)
+
+The LLM stage becomes experiment_1's tutor (`cascade/tutor_brain.py`), imported read-only:
+experiment_1's files are not changed and its state isn't written to. The tutor runs the
+lesson: it greets first, practises each phrase with a hint ladder (Hindi answers get the
+English for them), plays a short roleplay without correcting, reviews 2-3 mistakes, then
+prints a summary and saves spaced review and the next support stage to
+`runs/tutor_state/`. Each turn prints and logs the phase, verdict, hint level and whether
+the LLM or the tutor's rules answered.
+
+- Settings: `tutor:` in `config.yaml`, merged over `experiment_1/config/tutor.yaml`. Voice
+  needs Hindi in Devanagari (the Hindi voice can't read Roman Hindi), and thinking is
+  minimal for latency.
+- Keys: the tutor's JSON calls go Gemini key 1, then key 2 (60 s cool-down after a
+  failure). NVIDIA isn't used for the tutor yet: its JSON output hasn't been checked
+  against the tutor's schemas. When every key fails, the tutor's rule-based lines answer,
+  so a lesson never stops.
+- Saying or typing "quit" stops before the tutor sees it, so it isn't graded.
+
+Live run (2026-10-30, clips made with macOS voices, nothing played): the Hindi answer
+was bridged to English, and four correct English answers were judged `correct`. STT
+was ~1.45 s and the tutor reply 1.05-1.75 s per turn, so first audio is about 2.5-3.2 s:
+the tutor returns one JSON reply, so nothing can be spoken before all of it arrives.
+Whisper heard "मेरा नाम रवि है" as "मेरा नाम रविवार है": names are a known STT weak spot.
 
 ## Provider notes (tested 2026-10-30)
 
@@ -120,5 +148,7 @@ noise) may rank the models differently. Record a few clips with `--keep-audio`, 
   Hindi-English clips, where Whisper writes English words in Devanagari.
 - Transcribe while the learner is still talking (chunked STT), so only the last chunk
   is left when they stop: the next big cut after this one.
-- Swap the LLM stage for experiment_1's tutor (`ChatLLM.stream(history, text)` yields
-  sentences).
+- Tutor mode: run full lessons with real learner speech; check the verdicts with
+  minimal thinking; measure Gemini calls per lesson against the free-tier limits.
+- Tutor latency: stream the tutor's JSON and speak the first `say` segment as soon as it
+  is complete.

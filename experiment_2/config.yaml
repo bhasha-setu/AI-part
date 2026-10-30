@@ -49,6 +49,34 @@ llm:
   fallback_reply: "Sorry, I couldn't think of a reply. Please say that again."
   no_speech_reply: "I didn't hear anything. Please try again."
 
+tutor:                    # python -m cascade.cli --tutor
+  course: english_for_hindi_a1
+  scenario:               # empty = the course's first lesson (introducing_yourself)
+  learner: voice-learner  # support stage and spaced review are kept per learner, in
+                          # runs/tutor_state/ (experiment_1's own state is not touched)
+  overrides:              # merged over experiment_1/config/tutor.yaml
+    hindi_script: devanagari   # the Hindi voice can't read Roman Hindi
+    thinking_level: minimal    # latency; check verdicts stay right
+    # The conversation lasts as long as the learner needs: at least 3 turns, then it
+    # goes on while they keep talking (wants_to_end, see below), up to 12. Was 2-5.
+    converse_min_turns: 3
+    converse_max_turns: 12
+    system_prompt_append: |
+      Voice rules (this lesson is spoken):
+      - The learner's text is a speech-recognition transcript. Spelling, punctuation,
+        capitals and how names or places are written come from the recogniser, not the
+        learner: never treat them as mistakes, never list them in errors, never review them.
+      - Practice: the verdict is "correct" when the answer says the target in a correct
+        form, even inside a longer answer with extra sentences. Extra content is welcome:
+        react to it. Never ask the learner to make an answer shorter or simpler. A small
+        mistake outside the target does not make the answer wrong.
+      - Conversation: follow what the learner talks about. When they answer easily in full
+        English, or once the phrases have been used, ask open follow-up questions about
+        their own topics (why, how, what next) so they speak more, still in the situation's
+        role. Give the learner the time they need: keep going while they are engaged, and
+        set wants_to_end only when they wind down (short replies, saying goodbye) or ask to
+        stop. Still never correct mistakes during the conversation.
+
 tts:
   engine: macos-native    # macos-native (~50 ms to start) | macos-say (~700 ms) | elevenlabs
   rate: 175               # words per minute (macOS voices); slower helps beginners

@@ -50,6 +50,9 @@ class TurnResult:
     llm_error: Optional[str] = None
     tts_chars: int = 0                     # characters sent to TTS (ElevenLabs bills these)
     fallback_used: bool = False
+    stopped: bool = False                  # the learner said a stop word; nothing was replied
+    done: bool = False                     # the LLM stage says the conversation is over
+    tutor: Optional[dict] = None           # tutor mode: phase, verdict, source (llm/fallback)
 
     @property
     def reply_text(self) -> str:
