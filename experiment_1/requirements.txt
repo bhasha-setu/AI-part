@@ -1,5 +1,0 @@
-pyyaml>=6.0
-pytest>=7.0
-# The real LLM pieces (judge, generator, roleplay partner) on Gemini; key in .env:
-#   pip install google-genai
-# Tests, the stub judge and --offline need neither.

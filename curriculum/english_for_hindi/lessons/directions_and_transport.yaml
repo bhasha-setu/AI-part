@@ -1,0 +1,186 @@
+# DRAFT — seed content for the voice tutor. NOT pedagogically reviewed.
+# Target: Hindi-speaking learners at A1-A2 (CEFR). Scenario: directions and transport.
+# Error patterns target typical L1-Hindi transfer errors: Hindi word order in questions
+# ("station where is"), "how to go", "take left", "which bus go", "ticket of Delhi".
+scenario:
+  id: directions_and_transport
+  title: Directions and transport
+  can_do: "Ask the way, give simple left/right/straight directions, ask which bus to take, and buy a ticket."
+  # DRAFT dialogue. Not reviewed by a teacher. Audio is null until TTS exists.
+  model_dialogue:
+    - {speaker: "Kiran", text: "Excuse me, where is the station?", audio: null}
+    - {speaker: "Mohan", text: "Go straight, then turn left.", audio: null}
+    - {speaker: "Kiran", text: "Thank you. Which bus goes to the market?", audio: null}
+    - {speaker: "Mohan", text: "Bus number twelve.", audio: null}
+    - {speaker: "Kiran", text: "One ticket to the market, please.", audio: null}
+    - {speaker: "Conductor", text: "Twenty rupees, please.", audio: null}
+  useful_language:
+    - {phrase: "Where is the ...?", meaning: "to ask the way to a place", used_by: [travel_ask_way]}
+    - {phrase: "Go straight, then turn left.", meaning: "to give simple directions", used_by: [travel_directions]}
+    - {phrase: "Which bus goes to ...?", meaning: "to ask which bus to take", used_by: [travel_which_bus]}
+    - {phrase: "One ticket to ..., please.", meaning: "to buy a ticket", used_by: [travel_ticket]}
+  items:
+    - id: travel_ask_way
+      scenario: directions_and_transport
+      prompt: "You are new in town and need the railway station. Ask someone on the street."
+      cue: "Station → ? (ask)"
+      first_words: "Where is…"
+      model_answer: "Where is the station?"
+      accepted:
+        - "where is the {place}"
+        - "excuse me where is the {place}"
+        - "where is {place}"            # proper names: "where is mg road"
+        - "how do i get to the {place}"
+        - "how do i get to {place}"
+        - "how can i get to the {place}"
+        - "how do i go to the {place}"
+        - "which way is the {place}"
+        - "can you tell me the way to the {place}"
+      common_errors:
+        # Hindi word order — "station kahan hai" → "station where is".
+        - id: where_at_end
+          pattern: '^(?:excuse me )?(?:the )?(?P<place>.+?) where is(?: it)?$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: Where is the {place}?"
+          why: >-
+            In English the question word comes first: 'WHERE is the station?',
+            not 'Station where is?'.
+          example: "station where is"
+          correction_example: "where is the station"
+        # Indian English "how to go".
+        - id: how_to_go
+          pattern: '^how to (?:go|reach|get)(?: to)? (?:the )?(?P<place>.+)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: How do I get to the {place}?"
+          why: >-
+            A full question needs 'do I': 'How do I get to the station?'.
+            'How to go' is not a complete question.
+          example: "how to go to station"
+          correction_example: "how do i get to the station"
+      follow_up: "It's not far. Go straight, then turn left."
+
+    - id: travel_directions
+      scenario: directions_and_transport
+      prompt: "A tourist asks you the way to the bank. It is straight ahead, and then on the left. Tell them."
+      cue: "Straight + left → ?"
+      first_words: "Go straight…"
+      model_answer: "Go straight, then turn left."
+      accepted:
+        - "go straight then turn left"
+        - "go straight and turn left"
+        - "go straight and then turn left"
+        - "go straight ahead then turn left"
+        - "go straight ahead and turn left"
+        - "go straight then left"
+        - "go straight turn left"
+        - "walk straight then turn left"
+        - "walk straight and turn left"
+        - "go straight then take a left"
+        - "go straight and take a left"
+      common_errors:
+        # "take left" with no article.
+        - id: take_left
+          pattern: '^(?P<pre>.+?) take (?P<dir>left|right)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: {pre} turn {dir}."
+          why: >-
+            Say 'turn left' or 'take a left'. 'Take left' without 'a'
+            is not standard English.
+          example: "go straight then take left"
+          correction_example: "go straight then turn left"
+        # "left side" as a direction.
+        - id: left_side
+          pattern: '^(?P<pre>.+?) (?:go |turn |to |to the )?(?P<dir>left|right) side$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: {pre} turn {dir}."
+          why: >-
+            To give a direction, say 'turn left'. 'Left side' tells where
+            something is, not which way to go.
+          example: "go straight and left side"
+          correction_example: "go straight and turn left"
+      follow_up: null
+
+    - id: travel_which_bus
+      scenario: directions_and_transport
+      prompt: "You are at a bus stop. You want to go to the city market. Ask a person there."
+      cue: "Bus → market? (ask)"
+      first_words: "Which bus…"
+      model_answer: "Which bus goes to {place}?"
+      accepted:
+        - "which bus goes to {place}"
+        - "which bus do i take to {place}"
+        - "which bus should i take to {place}"
+        - "which bus is for {place}"
+        - "which bus for {place}"
+        - "does this bus go to {place}"
+        - "is this the bus to {place}"
+        - "which train goes to {place}"
+        - "which train do i take to {place}"
+      common_errors:
+        # Missing -s — "Which bus go to the market?".
+        - id: which_bus_go
+          pattern: '^which (?P<v>bus|train) go to (?P<place>.+)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: Which {v} goes to {place}? — 'goes', with -s."
+          why: >-
+            With one bus (he, she, it), the verb takes -s: 'the bus GOES'.
+          example: "which bus go to the market"
+          correction_example: "which bus goes to the market"
+        # Hindi word order — "market ke liye kaun si bus".
+        - id: place_first
+          pattern: '^(?:for )?(?P<place>.+?) which (?:bus|train)(?: goes| will go| go)?$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: Which bus goes to {place}?"
+          why: >-
+            In English the question word comes first: 'WHICH bus goes to the
+            market?'.
+          example: "for market which bus"
+          correction_example: "which bus goes to the market"
+      follow_up: "Bus number twelve."
+
+    - id: travel_ticket
+      scenario: directions_and_transport
+      prompt: "You get on the bus. You are travelling alone to the market. Buy your ticket from the conductor."
+      cue: "Ticket → market"
+      first_words: "One ticket…"
+      model_answer: "One ticket to {place}, please."
+      accepted:
+        - "one ticket to {place} please"
+        - "one ticket to {place}"
+        - "a ticket to {place} please"
+        - "a ticket to {place}"
+        - "one ticket for {place} please"
+        - "one ticket for {place}"
+        - "can i have a ticket to {place}"
+        - "can i have one ticket to {place}"
+        - "i would like a ticket to {place}"
+        - "i want a ticket to {place}"
+      common_errors:
+        # "Delhi ka ticket" → "ticket of Delhi".
+        - id: ticket_of
+          pattern: '^(?:give(?: me)? )?(?:one|a) ticket of (?P<place>.+?)(?: please)?$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: One ticket to {place}, please."
+          why: >-
+            For where you are going, use 'to': 'a ticket TO Delhi', not
+            'a ticket of Delhi'.
+          example: "one ticket of delhi"
+          correction_example: "one ticket to delhi"
+        # Dropped preposition — "One ticket Delhi".
+        - id: ticket_missing_to
+          pattern: '^(?:one|a) ticket (?!to |for |of |please$)(?P<place>.+?)(?: please)?$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: One ticket to {place}, please."
+          why: >-
+            Put 'to' before the place: 'one ticket TO Delhi'.
+          example: "one ticket delhi please"
+          correction_example: "one ticket to delhi please"
+      follow_up: "Twenty rupees, please."

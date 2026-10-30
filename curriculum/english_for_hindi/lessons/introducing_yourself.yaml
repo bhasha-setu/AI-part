@@ -1,0 +1,146 @@
+# Copied from courses/english_for_hindi_a1/scenarios/introducing_yourself.yaml (2026-10-30).
+# DRAFT — seed content for guided practice. NOT pedagogically reviewed.
+# Target: Hindi-speaking learners at A1 (CEFR). Scenario: introducing yourself.
+# Error patterns target typical L1-Hindi transfer errors (see README).
+scenario:
+  id: introducing_yourself
+  title: Introducing yourself
+  can_do: "Introduce yourself: say your name, where you are from, what you do, and one thing you like."
+  # DRAFT dialogue. Not reviewed by a teacher. Audio is null until TTS exists.
+  model_dialogue:
+    - {speaker: "Asha", text: "Hello! What is your name?", audio: null}
+    - {speaker: "Ravi", text: "My name is Ravi.", audio: null}
+    - {speaker: "Asha", text: "Nice to meet you, Ravi. Where are you from?", audio: null}
+    - {speaker: "Ravi", text: "I am from Dehradun.", audio: null}
+    - {speaker: "Asha", text: "What do you do?", audio: null}
+    - {speaker: "Ravi", text: "I am a student. I like cricket.", audio: null}
+  # Phrases taught before practice. used_by lists the item ids that need them.
+  useful_language:
+    - {phrase: "My name is ...", meaning: "to say your name", used_by: [intro_name]}
+    - {phrase: "I am from ...", meaning: "to say where you come from", used_by: [intro_origin]}
+    - {phrase: "I am a ...", meaning: "to say your job or study", used_by: [intro_work]}
+    - {phrase: "I like ...", meaning: "to say something you enjoy", used_by: [intro_interest]}
+  items:
+    - id: intro_name
+      scenario: introducing_yourself
+      prompt: "Someone asks your name. Say it."
+      cue: "Name → ?"
+      first_words: "My name is…"
+      model_answer: "My name is {name}."
+      accepted:
+        - "my name is {name}"
+        - "my name's {name}"      # normalises via apostrophe handling
+        - "i am {name}"
+        - "i'm {name}"            # normalises to "i am {name}"
+      common_errors:
+        # Missing copula — Hindi often omits the linking verb.
+        - id: missing_copula
+          pattern: "my name {name}"
+          verdict: surface_error
+          feedback: "Say: My name is {name}."
+          why: >-
+            English keeps the verb 'is' here: 'My name IS Ravi'. Hindi can leave
+            it out, but in English the sentence needs it.
+          example: "my name ravi"
+          correction_example: "my name is ravi"
+      follow_up: "Nice to meet you! How are you today?"
+
+    - id: intro_origin
+      scenario: introducing_yourself
+      prompt: "The person asks where you are from. Answer."
+      cue: "From → ?"
+      first_words: "I'm from…"
+      model_answer: "I'm from {place}."
+      accepted:
+        - "i am from {place}"     # 'i'm from' normalises to this
+        - "i come from {place}"
+        # Nationality adjectives are a valid answer and must NOT trip the
+        # missing-'from' pattern. A real system needs a place/nationality
+        # lexicon; this seed lists a few common ones (see README decisions).
+        - "i am indian"
+        - "i am american"
+        - "i am british"
+        - "i am nepali"
+        - "i am canadian"
+        - "i am australian"
+      common_errors:
+        # Missing 'from' preposition — "I am Dehradun" for "I'm from Dehradun".
+        - id: missing_from_preposition
+          pattern: "i am {place}"
+          verdict: surface_error
+          feedback: "Say: I'm from {place}."
+          why: >-
+            To give your city or country, use 'I'm from': 'I'm from Dehradun',
+            not 'I am Dehradun'.
+          example: "i am dehradun"
+          correction_example: "i am from dehradun"
+      follow_up: null
+
+    - id: intro_work
+      scenario: introducing_yourself
+      prompt: "They ask what you do. Say your job, or that you are a student."
+      cue: "Work / study → ?"
+      first_words: "I am a…"
+      model_answer: "I am a {job}."
+      accepted:
+        - "i am a {job}"          # 'i'm a {job}' normalises to this
+        - "i am an {job}"
+        - "i work as a {job}"
+        - "i work as an {job}"
+        - "i work in {place}"     # "I work in a bank"
+        - "i work at {place}"
+        - "i am working in {place}"
+        - "i am studying {subject}"
+        - "i study {subject}"
+        - "i am studying"
+        - "i am working"
+      common_errors:
+        # Dropped article (consonant-initial job) — "I am student".
+        - id: dropped_article
+          pattern: "^i am (?P<job>student|teacher|doctor|nurse|lawyer|farmer|driver|cook|writer|manager|developer|designer|dentist|singer|player|worker|clerk|chef|tailor|painter|banker)$"
+          regex: true
+          verdict: surface_error
+          feedback: "Say: I am a {job}."
+          why: >-
+            Before a singular job or role, English needs 'a' or 'an':
+            'a student', 'a teacher'.
+          example: "i am student"
+          correction_example: "i am a student"
+        # Dropped article (vowel-initial job) — needs 'an', not 'a'.
+        - id: dropped_article_vowel
+          pattern: "^i am (?P<job>engineer|architect|accountant|artist|author|officer|actor|electrician|intern|editor|analyst)$"
+          regex: true
+          verdict: surface_error
+          feedback: "Say: I am an {job}."
+          why: >-
+            Before a job starting with a vowel sound, use 'an':
+            'an engineer', 'an artist'.
+          example: "i am engineer"
+          correction_example: "i am an engineer"
+      follow_up: null
+
+    - id: intro_interest
+      scenario: introducing_yourself
+      prompt: "Tell the person one thing you like."
+      cue: "Like → ?"
+      first_words: "I like…"
+      model_answer: "I like {interest}."
+      accepted:
+        - "i like {interest}"
+        - "i enjoy {interest}"
+        - "i love {interest}"
+        - "i play {interest}"
+        - "i go {interest}"       # "I go swimming", "I go to the gym"
+      common_errors:
+        # Wrong verb form after "I am" — "I am like cricket" / "I am go swimming".
+        - id: wrong_verb_after_i_am
+          pattern: "^i am (?P<fixed>(?:like|love|enjoy|play|go) .+)$"
+          regex: true
+          verdict: surface_error
+          feedback: "Say: I {fixed}."
+          why: >-
+            Don't put 'am' before another verb. Say 'I like cricket', not
+            'I am like cricket'.
+          example: "i am like cricket"
+          correction_example: "i like cricket"
+      follow_up: null

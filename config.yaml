@@ -1,0 +1,132 @@
+# Experiment 2: cascaded speech-to-speech (STT -> LLM -> TTS).
+# Numbers here are starting points; tune them with `python -m cascade.bench`.
+
+stt:
+  engine: mlx             # mlx (Apple GPU) | faster-whisper (CPU, ~5x slower)
+  model: large-v3-turbo   # ~1.5 s with detect_model small; best Hindi so far. "small" alone:
+                          # ~0.6 s, but more Hindi spelling errors.
+  detect_model: small     # mlx only: a smaller model picks the language (saves ~1 s with
+                          # large-v3-turbo). Empty = the model itself.
+  languages: [en, hi]     # detection is restricted to these (Whisper often hears Hindi as Urdu)
+  language_aliases: {ur: hi}   # spoken Hindi and Urdu sound the same: count Urdu as Hindi
+  prefer_language: en     # Whisper is unsure of accented English (p 0.2-0.3) and once sent
+  switch_share: 0.7       # "I am from Dehradun" to Hindi. Hindi is chosen only when it has
+                          # more than 70% of en+hi. Both scores are logged per turn
+                          # (transcript.language_scores) to tune this.
+  vad_filter: true        # trim silence first; Whisper invents "Thank you." on silence
+  # faster-whisper only:
+  device: cpu
+  compute_type: int8
+  beam_size: 1
+
+llm:
+  # Tried in order; a provider that fails (429, timeout) is skipped for cooldown_seconds.
+  # For each key_env, KEY, KEY_2, KEY_3 ... are all picked up from the repo-root .env.
+  providers:
+    - type: gemini
+      key_env: GEMINI_API_KEY
+      model: gemini-3.5-flash-lite
+      thinking_level: minimal        # ~0.72 s vs ~1.0 s with default thinking
+    - type: openai_compat            # NVIDIA hosted models (build.nvidia.com)
+      label: nvidia
+      key_env: NVIDIA_API_KEY
+      base_url: https://integrate.api.nvidia.com/v1
+      model: nvidia/nemotron-3.5-lightning-30b-a3b   # ~0.65 s with thinking off (2026-10-30)
+      extra_body:                    # with thinking on it spends all 300 tokens reasoning
+        chat_template_kwargs: {enable_thinking: false}
+      # Also tried on the free endpoints: nemotron-3.5-bolt-e4b (~0.7 s, drops punctuation);
+      # gemma-4-31b-it and deepseek-v4.1-flash timed out after 90 s (queued).
+  cooldown_seconds: 60
+  timeout_seconds: 15
+  max_output_tokens: 300
+  max_history_turns: 12
+  system_prompt: |
+    You are a friendly English speaking partner for a Hindi speaker who knows some
+    English (beginner to intermediate). This is a spoken conversation: your reply is
+    read aloud by a text-to-speech voice.
+    - Keep replies short: one to three simple sentences, then one easy question to keep
+      them talking.
+    - Use simple, everyday English. The learner may speak Hindi, English or a mix; that
+      is fine. If they use Hindi, give the English way to say it, briefly.
+    - Write any Hindi in Devanagari script (never Roman Hindi), so the Hindi voice can
+      read it.
+    - No markdown, lists, emoji or symbols; only words that sound natural when spoken.
+  fallback_reply: "Sorry, I couldn't think of a reply. Please say that again."
+  no_speech_reply: "I didn't hear anything. Please try again."
+
+tutor:                    # python -m cascade.cli (lessons are the default mode)
+  course: english_for_hindi_a1
+  scenario:               # empty = the course's first lesson (introducing_yourself)
+  learner: voice-learner  # support stage and spaced review are kept per learner, in
+                          # runs/tutor_state/ (per learner)
+  tips: true              # after each sentence with a mistake or an unnatural phrase, say
+                          # a better way first ("Tip: you can say, ...") and print why.
+                          # Practice: only after a correct answer (for a wrong one the hint
+                          # ladder decides how much to give away).
+  hedge_after_seconds: 4  # a Gemini call usually takes 1.5-2.5 s but sometimes stalls
+                          # 12-19 s: after 4 s the other key gets the same request too and
+                          # the first answer wins. When Gemini is slow overall (6-7 s medians
+                          # at 19:30 IST) this fires often and uses both keys' quota; each
+                          # turn logs "hedged" when it fired.
+  voice_gender: male      # the voice (ElevenLabs George, macOS Rishi) is a man: roleplay
+                          # partners with women's names are renamed to men's names
+  overrides:              # merged over config/tutor.yaml
+    hindi_script: devanagari   # the Hindi voice can't read Roman Hindi
+    # Tested 2026-10-30: gemini-3.5-flash (2.7 s, 3/7 replies lost to 429/503) and
+    # gemini-3.7-flash (503/504 overloaded) were worse than flash-lite on the free tier.
+    # "low" vs "minimal" on 15 tutor calls each: both used 0 thinking tokens, so they are
+    # the same; the latency is Gemini's load (median 1.4 s in the morning, 6-7 s at
+    # 19:30 IST, single calls up to 17 s). hedge_after_seconds handles the stalls.
+    thinking_level: minimal
+    # The conversation lasts as long as the learner needs: at least 3 turns, then it
+    # goes on while they keep talking (wants_to_end, see below), up to 12. Was 2-5.
+    converse_min_turns: 3
+    converse_max_turns: 12
+    system_prompt_append: |
+      Voice rules (this lesson is spoken):
+      - The learner's text is a speech-recognition transcript. Spelling, punctuation,
+        capitals and how names or places are written come from the recogniser, not the
+        learner: never treat them as mistakes, never list them in errors, never review them.
+      - Practice: the verdict is "correct" when the answer says the target in a correct
+        form, even inside a longer answer with extra sentences. Extra content is welcome:
+        react to it. Never ask the learner to make an answer shorter or simpler. A small
+        mistake outside the target does not make the answer wrong.
+      - Conversation: follow what the learner talks about. When they answer easily in full
+        English, or once the phrases have been used, ask open follow-up questions about
+        their own topics (why, how, what next) so they speak more, still in the situation's
+        role. Give the learner the time they need: keep going while they are engaged, and
+        set wants_to_end only when they wind down (short replies, saying goodbye) or ask to
+        stop. Still never correct mistakes during the conversation.
+      - One speaker: everything you say is read by one male voice. Speak as a man: in
+        Hindi use masculine first-person forms (मैं बताता हूँ, मैं समझ गया), never feminine
+        ones. When you play a character, that character is a man.
+      - In Hindi, always address the learner as आप (कोशिश कीजिए, बोलिए, आपने), never तुम or
+        तू, and never switch between them.
+      - Praise ("That's right", "Great", "Correct") only an answer you judged correct.
+        For a Hindi answer, thank them for trying and help them say it in English.
+      - Call the learner only by the name they told you. The example dialogue's names are
+        examples, not the learner's name.
+    lines:                     # the tutor's fixed Hindi lines, in the आप form (was तुम)
+      hint_hi:
+        roman: "Koi baat nahi, phir se koshish kijiye."
+        devanagari: "कोई बात नहीं, फिर से कोशिश कीजिए।"
+      bridge_hi:
+        roman: "Matlab bilkul sahi hai! Ab English mein boliye."
+        devanagari: "मतलब बिल्कुल सही है! अब इंग्लिश में बोलिए।"
+      review_prompt_hi:
+        roman: "Ek chhoti si galti hai. Khud theek karke dekhiye."
+        devanagari: "एक छोटी सी ग़लती है। ख़ुद ठीक करके देखिए।"
+
+tts:
+  engine: elevenlabs      # elevenlabs (best quality; macOS voices take over if it fails) |
+                          # macos-native (~50 ms to start, free) | macos-say (~700 ms)
+  rate: 175               # words per minute (macOS voices); slower helps beginners
+  voices:                 # macOS voices, one per language
+    en: Rishi             # Indian English; Aman and Tara also work
+    hi: Lekha             # needs Devanagari text
+  elevenlabs:
+    key_env: ELEVENLABS_API_KEY
+    model: eleven_flash_v2_5      # lowest-latency model, 0.5 credit/char, supports Hindi
+    voice_id: JBFqnCBsd6RMkjVDRZzb   # George, a built-in Default voice (works on the free plan)
+    # voice_id_env: ELEVENLABS_API_KEY_Voice_id   # read the voice from .env instead. Free plan:
+    #                                             # Default voices only; Library voices get HTTP 402.

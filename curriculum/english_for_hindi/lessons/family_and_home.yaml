@@ -1,0 +1,177 @@
+# DRAFT — seed content for the voice tutor. NOT pedagogically reviewed.
+# Target: Hindi-speaking learners at A1 (CEFR). Scenario: talking about your family and home.
+# Error patterns target typical L1-Hindi transfer errors: missing copula, "there is" with
+# plurals, missing possessive 's, he/she slips, "I am live", dropped prepositions.
+scenario:
+  id: family_and_home
+  title: Family and home
+  can_do: "Talk about your family: how many people, a brother's or sister's name, where you live and who you live with."
+  # DRAFT dialogue. Not reviewed by a teacher. Audio is null until TTS exists.
+  model_dialogue:
+    - {speaker: "Priya", text: "Tell me about your family, Arjun.", audio: null}
+    - {speaker: "Arjun", text: "There are four people in my family.", audio: null}
+    - {speaker: "Priya", text: "Do you have a sister?", audio: null}
+    - {speaker: "Arjun", text: "Yes. My sister's name is Meera.", audio: null}
+    - {speaker: "Priya", text: "Where do you live?", audio: null}
+    - {speaker: "Arjun", text: "I live in Pune.", audio: null}
+    - {speaker: "Priya", text: "Who do you live with?", audio: null}
+    - {speaker: "Arjun", text: "I live with my parents.", audio: null}
+  useful_language:
+    - {phrase: "There are ... people in my family.", meaning: "to say how big your family is", used_by: [family_size]}
+    - {phrase: "My sister's name is ...", meaning: "to say your sister's name", used_by: [family_sibling_name]}
+    - {phrase: "I live in ...", meaning: "to say your town or city", used_by: [family_live]}
+    - {phrase: "I live with my ...", meaning: "to say who shares your home", used_by: [family_live_with]}
+  items:
+    - id: family_size
+      scenario: family_and_home
+      prompt: "Someone asks how big your family is. Tell them the number of people."
+      cue: "Family → ? (how many)"
+      first_words: "There are…"
+      model_answer: "There are {number} people in my family."
+      accepted:
+        - "there are {number} people in my family"
+        - "there are {number} members in my family"
+        - "there are {number} of us"
+        - "we are {number} people in my family"
+        - "we are {number} people"
+        - "my family has {number} people"
+        - "my family has {number} members"
+        - "we are a family of {number}"
+      common_errors:
+        # Hindi word order and copula: "mere parivaar mein chaar log hain".
+        - id: family_hindi_word_order
+          pattern: '^in my family (?P<number>\S+) (?:people|members)(?: are| is)?$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: There are {number} people in my family."
+          why: >-
+            English starts with 'There are' to say how many: 'There are four
+            people in my family', not 'In my family four people are'.
+          example: "in my family four people are"
+          correction_example: "there are four people in my family"
+        # "there is" with a plural.
+        - id: family_there_is_plural
+          pattern: '^there is (?P<number>\S+) (?:people|members) in my family$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: There are {number} people in my family."
+          why: >-
+            For more than one person, use 'there are', not 'there is'.
+          example: "there is four people in my family"
+          correction_example: "there are four people in my family"
+      follow_up: "That's nice! Do you have any brothers or sisters?"
+
+    - id: family_sibling_name
+      scenario: family_and_home
+      prompt: "You have a sister. Someone asks what she is called. Answer."
+      cue: "Sister → name?"
+      first_words: "My sister's name…"
+      model_answer: "My sister's name is {name}."
+      accepted:
+        - "my sister's name is {name}"
+        - "my sisters name is {name}"     # speech-to-text often drops the apostrophe
+        - "my sister is {name}"
+        - "my sister is called {name}"
+        - "her name is {name}"
+        - "she is called {name}"
+        - "i have a sister called {name}"
+        - "i have a sister named {name}"
+      common_errors:
+        # Missing possessive 's — "my sister name".
+        - id: missing_possessive_s
+          pattern: "my sister name is {name}"
+          verdict: surface_error
+          feedback: "Say: My sister's name is {name}."
+          why: >-
+            To show that something belongs to a person, English adds 's:
+            'my sister's name', not 'my sister name'.
+          example: "my sister name is meera"
+          correction_example: "my sister's name is meera"
+        # He/she slip — 'his' for a sister.
+        - id: his_for_her
+          pattern: '^his name is (?P<name>.+)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: Her name is {name} — your sister is a woman, so use 'her'."
+          why: >-
+            English shows gender in the pronoun: 'his' for a man, 'her' for a
+            woman. Your sister is 'her'.
+          example: "his name is meera"
+          correction_example: "her name is meera"
+      follow_up: null
+
+    - id: family_live
+      scenario: family_and_home
+      prompt: "Someone asks which city your home is in. Answer."
+      cue: "Home → city?"
+      first_words: "I live…"
+      model_answer: "I live in {place}."
+      accepted:
+        - "i live in {place}"
+        - "i am living in {place}"
+        - "i stay in {place}"
+        - "i am staying in {place}"
+        - "we live in {place}"
+        - "my home is in {place}"
+        - "my house is in {place}"
+      common_errors:
+        # Dropped preposition — "I live Pune".
+        - id: live_missing_in
+          pattern: '^i (?:live|stay) (?!in |at |near |with )(?P<place>\S+)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: I live in {place}."
+          why: >-
+            Put 'in' before a city or town: 'I live in Pune', not 'I live Pune'.
+          example: "i live pune"
+          correction_example: "i live in pune"
+        # "am" before another verb — "I am live in Pune".
+        - id: am_before_live
+          pattern: '^i am live in (?P<place>.+)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: I live in {place}."
+          why: >-
+            Don't put 'am' before the verb 'live'. Say 'I live in Pune',
+            not 'I am live in Pune'.
+          example: "i am live in pune"
+          correction_example: "i live in pune"
+      follow_up: "Nice! Do you like living there?"
+
+    - id: family_live_with
+      scenario: family_and_home
+      prompt: "Someone asks who shares your home. Say you live with your mother and father."
+      cue: "Live with → ?"
+      first_words: "I live with…"
+      model_answer: "I live with my parents."
+      accepted:
+        - "i live with my {who}"
+        - "i stay with my {who}"
+        - "i am living with my {who}"
+        - "i am staying with my {who}"
+        - "with my {who}"
+        - "i live with my mother and father"
+      common_errors:
+        # Dropped possessive 'my' — "I live with parents".
+        - id: live_with_missing_my
+          pattern: '^i (?:live|stay) with (?P<who>parents|family|wife|husband|brother|sister|mother|father|children|kids|grandparents|son|daughter)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: I live with my {who}."
+          why: >-
+            Talking about your own family, English uses 'my':
+            'I live with my parents'.
+          example: "i live with parents"
+          correction_example: "i live with my parents"
+        # "am" before another verb.
+        - id: am_before_live_with
+          pattern: '^i am (?:live|stay) with (?P<rest>.+)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: I live with {rest}."
+          why: >-
+            Don't put 'am' before the verb 'live'. Say 'I live with my
+            parents', not 'I am live with my parents'.
+          example: "i am live with my parents"
+          correction_example: "i live with my parents"
+      follow_up: null

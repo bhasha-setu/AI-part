@@ -1,0 +1,191 @@
+# DRAFT — seed content for the voice tutor. NOT pedagogically reviewed.
+# Target: Hindi-speaking learners at A2 (CEFR). Scenario: a job interview.
+# Error patterns target typical L1-Hindi transfer errors: "I am having experience",
+# "since three years", "good in", "I am wanting", "for learn", "what is the hours".
+scenario:
+  id: job_interview
+  title: A job interview
+  can_do: "Answer simple interview questions: your experience, your strengths, why you want the job, and ask a question at the end."
+  # DRAFT dialogue. Not reviewed by a teacher. Audio is null until TTS exists.
+  model_dialogue:
+    - {speaker: "Interviewer", text: "Please sit down, Priya. Tell me about your experience.", audio: null}
+    - {speaker: "Priya", text: "I have three years of experience in sales.", audio: null}
+    - {speaker: "Interviewer", text: "Good. What are your strengths?", audio: null}
+    - {speaker: "Priya", text: "I am good at talking to customers.", audio: null}
+    - {speaker: "Interviewer", text: "Why do you want this job?", audio: null}
+    - {speaker: "Priya", text: "I want this job because I want to learn and grow.", audio: null}
+    - {speaker: "Interviewer", text: "Do you have any questions for us?", audio: null}
+    - {speaker: "Priya", text: "Yes. What are the working hours?", audio: null}
+    - {speaker: "Interviewer", text: "Nine to six, Monday to Friday.", audio: null}
+  useful_language:
+    - {phrase: "I have ... years of experience.", meaning: "to say how long you have worked", used_by: [interview_experience]}
+    - {phrase: "I am good at ...", meaning: "to say what you do well", used_by: [interview_strength]}
+    - {phrase: "I want this job because ...", meaning: "to give your reason for applying", used_by: [interview_why_this_job]}
+    - {phrase: "What are the working hours?", meaning: "to ask about the time you will work", used_by: [interview_ask_question]}
+  items:
+    - id: interview_experience
+      scenario: job_interview
+      prompt: "The interviewer asks about your work experience. Say how many years you have worked."
+      cue: "Experience → ? (years)"
+      first_words: "I have…"
+      model_answer: "I have {years} years of experience."
+      accepted:
+        - "i have {years} years of experience"
+        - "i have {years} years of experience in {field}"
+        - "i have {years} years experience"
+        - "i have {years} years experience in {field}"
+        - "i have worked for {years} years"
+        - "i have worked as a {job} for {years} years"
+        - "i have worked as an {job} for {years} years"
+        - "i have been working for {years} years"
+        - "i have been a {job} for {years} years"
+        - "i worked as a {job} for {years} years"
+      common_errors:
+        # Progressive with a state verb — "I am having experience".
+        - id: am_having_experience
+          pattern: '^i am having (?P<years>\S+) years?(?: of)? experience(?: in (?P<field>.+))?$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: I have {years} years of experience."
+          why: >-
+            'Have' meaning 'own' does not take -ing. Say 'I have three years of
+            experience', not 'I am having'.
+          example: "i am having three years of experience"
+          correction_example: "i have three years of experience"
+        # since / for confusion — "since three years".
+        - id: since_for_years
+          pattern: '^i (?:am working|have been working|have worked)(?: as an? \S+)? since (?P<years>\S+) years?$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: I have been working for {years} years."
+          why: >-
+            Use 'for' with a length of time (for three years) and 'since' with
+            a starting point (since 2021). Also say 'have been working', not
+            'am working'.
+          example: "i am working since three years"
+          correction_example: "i have been working for three years"
+      follow_up: "That's good experience. What did you do in your last job?"
+
+    - id: interview_strength
+      scenario: job_interview
+      prompt: "The interviewer asks about your strengths. Name one thing you do well."
+      cue: "Strength → ?"
+      first_words: "I am good…"
+      model_answer: "I am good at {skill}."
+      accepted:
+        - "i am good at {skill}"      # "i'm good at" normalises to this
+        - "i am very good at {skill}"
+        - "i am really good at {skill}"
+        - "my strength is {skill}"
+        - "my biggest strength is {skill}"
+        - "my main strength is {skill}"
+        - "i have good {skill} skills"
+        - "i have strong {skill} skills"
+        - "i am skilled at {skill}"
+        - "i am skilled in {skill}"
+      common_errors:
+        # Wrong preposition — "good in" for "good at".
+        - id: good_in
+          pattern: '^i am (?:very |really )?good in (?P<skill>.+)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: I am good at {skill}."
+          why: >-
+            After 'good', English uses 'at': 'good at computers', not
+            'good in computers'.
+          example: "i am good in computers"
+          correction_example: "i am good at computers"
+        # Progressive with 'have' — "I am having good skills".
+        - id: am_having_skills
+          pattern: '^i am having (?:good |strong )?(?P<skill>.+?) skills$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: I have good {skill} skills."
+          why: >-
+            'Have' meaning 'own' does not take -ing. Say 'I have good skills',
+            not 'I am having good skills'.
+          example: "i am having good communication skills"
+          correction_example: "i have good communication skills"
+      follow_up: "Can you give me an example?"
+
+    - id: interview_why_this_job
+      scenario: job_interview
+      prompt: "The interviewer asks why you applied here. Give one reason."
+      cue: "Reason → ?"
+      first_words: "I want…"
+      model_answer: "I want this job because {reason}."
+      accepted:
+        - "i want this job because {reason}"
+        - "i would like this job because {reason}"
+        - "i want to work here because {reason}"
+        - "i would like to work here because {reason}"
+        - "i want this job to {reason}"
+        - "i want to work here to {reason}"
+        - "i am interested in this job because {reason}"
+        - "i applied because {reason}"
+        - "i applied for this job because {reason}"
+      common_errors:
+        # Progressive with a state verb — "I am wanting".
+        - id: am_wanting
+          pattern: '^i am wanting (?:this job|to work here)(?: .+)?$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: I want this job because ... — not 'I am wanting'."
+          why: >-
+            'Want' does not usually take -ing. Say 'I want this job', not
+            'I am wanting this job'.
+          example: "i am wanting this job because i like computers"
+          correction_example: "i want this job because i like computers"
+        # "for + verb" from Hindi "seekhne ke liye" — "for learn".
+        - id: for_plus_verb
+          pattern: '^i (?:want|would like) (?:this job|to work here) for (?P<verb>learn|grow|gain|get|improve|use|build|work) (?P<rest>.+)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: I want this job to {verb} {rest}."
+          why: >-
+            To give a purpose, use 'to' + verb: 'to learn new skills', not
+            'for learn new skills'.
+          example: "i want this job for learn new skills"
+          correction_example: "i want this job to learn new skills"
+      follow_up: "That's a good reason. Where do you see yourself in five years?"
+
+    - id: interview_ask_question
+      scenario: job_interview
+      prompt: "At the end, the interviewer says: 'Do you have any questions?' Ask about the time you will work each day."
+      cue: "Hours → ? (ask)"
+      first_words: "What are…"
+      model_answer: "What are the working hours?"
+      accepted:
+        - "what are the working hours"
+        - "what are my working hours"
+        - "what are the working hours here"
+        - "what are the office hours"
+        - "what are the timings"
+        - "what are the work timings"
+        - "can you tell me the working hours"
+        - "can you tell me what the working hours are"
+        - "what time does work start"
+        - "when does the work start"
+      common_errors:
+        # Plural agreement — "what is the working hours".
+        - id: is_with_plural
+          pattern: '^what is (?:the |my )?(?P<what>working hours|office hours|timings|work timings)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: What are the {what}? — 'hours' is plural, so use 'are'."
+          why: >-
+            'Hours' and 'timings' are plural, so the verb is 'are', not 'is'.
+          example: "what is the working hours"
+          correction_example: "what are the working hours"
+        # Statement word order in a question — "what the working hours are?".
+        - id: question_word_order
+          pattern: '^what (?:the |my )(?P<what>.+) (?:are|is)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: What are the {what}? — the verb comes before the subject in a question."
+          why: >-
+            In a question, put 'are' right after 'what': 'What ARE the working
+            hours?', not 'What the working hours are?'.
+          example: "what the working hours are"
+          correction_example: "what are the working hours"
+      follow_up: "Nine to six, Monday to Friday. Any other questions?"

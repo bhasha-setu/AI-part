@@ -1,0 +1,186 @@
+# DRAFT — seed content for the voice tutor. NOT pedagogically reviewed.
+# Target: Hindi-speaking learners at A1-A2 (CEFR). Scenario: shopping for clothes.
+# Error patterns target typical L1-Hindi transfer errors: questions by intonation only
+# ("You have white shirts?"), "more big", dropped articles, "I take it" for a decision.
+scenario:
+  id: shopping
+  title: Shopping
+  can_do: "Shop for clothes: ask if they have something, ask for another size, ask to try it on, and say you'll buy it."
+  # DRAFT dialogue. Not reviewed by a teacher. Audio is null until TTS exists.
+  model_dialogue:
+    - {speaker: "Shopkeeper", text: "Good morning! Can I help you?", audio: null}
+    - {speaker: "Anjali", text: "Yes. Do you have white shirts?", audio: null}
+    - {speaker: "Shopkeeper", text: "Yes, here is one.", audio: null}
+    - {speaker: "Anjali", text: "It is too small. Do you have a bigger size?", audio: null}
+    - {speaker: "Shopkeeper", text: "Yes, this one is large.", audio: null}
+    - {speaker: "Anjali", text: "Can I try it on?", audio: null}
+    - {speaker: "Shopkeeper", text: "Of course. The trial room is there.", audio: null}
+    - {speaker: "Anjali", text: "It fits well. I'll take it.", audio: null}
+  useful_language:
+    - {phrase: "Do you have ...?", meaning: "to ask if the shop sells something", used_by: [shop_have]}
+    - {phrase: "Do you have a bigger size?", meaning: "to ask for a larger one", used_by: [shop_size]}
+    - {phrase: "Can I try it on?", meaning: "to ask to wear it before buying", used_by: [shop_try]}
+    - {phrase: "I'll take it.", meaning: "to say you will buy it", used_by: [shop_take]}
+  items:
+    - id: shop_have
+      scenario: shopping
+      prompt: "You are in a clothes shop. You want a white shirt. Ask the shopkeeper if they sell them."
+      cue: "White shirts → ? (ask)"
+      first_words: "Do you have…"
+      model_answer: "Do you have white shirts?"
+      accepted:
+        - "do you have {item}"
+        - "do you have any {item}"
+        - "have you got {item}"
+        - "do you sell {item}"
+        - "i am looking for {item}"
+        - "i would like {item}"
+        - "is there {item}"
+      common_errors:
+        # Question by intonation only — "You have white shirts?".
+        - id: question_without_do
+          pattern: '^you (?:have|sell|have got) (?P<item>.+)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: Do you have {item}?"
+          why: >-
+            English questions need 'do' at the start: 'DO you have white
+            shirts?'. A rising voice alone is not enough.
+          example: "you have white shirts"
+          correction_example: "do you have white shirts"
+        # Hindi word order — "safed shirt hai?" → "White shirt is there?".
+        - id: is_there_at_end
+          pattern: '^(?P<item>.+?) (?:is|are) there$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: Do you have {item}?"
+          why: >-
+            In English the question words come first: 'Do you have a white
+            shirt?', not 'White shirt is there?'.
+          example: "white shirt is there"
+          correction_example: "do you have a white shirt"
+      follow_up: "Yes, we do. What size do you need?"
+
+    - id: shop_size
+      scenario: shopping
+      prompt: "You try a shirt but it is too small. Ask the shopkeeper for one that fits."
+      cue: "Too small → ?"
+      first_words: "Do you have…"
+      model_answer: "Do you have a bigger size?"
+      accepted:
+        - "do you have a bigger size"
+        - "do you have a larger size"
+        - "do you have a bigger one"
+        - "do you have this in a bigger size"
+        - "do you have it in a bigger size"
+        - "do you have this in {size}"
+        - "do you have it in {size}"
+        - "is there a bigger size"
+        - "can i have a bigger size"
+        - "can i get a bigger size"
+        - "i need a bigger size"
+        - "a bigger size please"
+      common_errors:
+        # "aur bada" → "more big".
+        - id: more_big
+          pattern: '^.*\bmore (?:big|bigger|large|larger)\b.*$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: Do you have a bigger size? — 'bigger', not 'more big'."
+          why: >-
+            Short words like 'big' add -er: 'bigger', 'smaller'.
+            Don't say 'more big'.
+          example: "do you have more big size"
+          correction_example: "do you have a bigger size"
+        # Dropped article — "Do you have bigger size?".
+        - id: size_missing_a
+          pattern: '^do you have (?:bigger|larger|smaller) (?:size|one)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: Do you have a bigger size? — don't forget 'a'."
+          why: >-
+            Before one thing, English needs 'a': 'a bigger size'.
+          example: "do you have bigger size"
+          correction_example: "do you have a bigger size"
+      follow_up: null
+
+    - id: shop_try
+      scenario: shopping
+      prompt: "You like the shirt. Ask if you can wear it in the shop before buying."
+      cue: "Wear first → ? (ask)"
+      first_words: "Can I try…"
+      model_answer: "Can I try it on?"
+      accepted:
+        - "can i try it on"
+        - "can i try this on"
+        - "may i try it on"
+        - "may i try this on"
+        - "could i try it on"
+        - "can i try it"
+        - "can i try this"
+        - "where is the trial room"
+        - "where is the changing room"
+      common_errors:
+        # Indian English "take a trial".
+        - id: take_a_trial
+          pattern: '^(?:can|may) i (?:take a |take |do )?trial(?: it| this| of it| of this)?$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: Can I try it on?"
+          why: >-
+            For clothes, English says 'try it on'. 'Take a trial' is not
+            used for clothes.
+          example: "can i take a trial"
+          correction_example: "can i try it on"
+        # Statement word order for a question.
+        - id: i_can_try
+          pattern: '^i can try (?P<rest>.+)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: Can I try {rest}?"
+          why: >-
+            To ask, put 'can' first: 'CAN I try it on?'. 'I can try it on'
+            is a statement, not a question.
+          example: "i can try it on"
+          correction_example: "can i try it on"
+      follow_up: "Sure. The trial room is over there."
+
+    - id: shop_take
+      scenario: shopping
+      prompt: "The shirt fits well. Tell the shopkeeper you have decided to buy it."
+      cue: "Buy → ?"
+      first_words: "I'll take…"
+      model_answer: "I'll take it."
+      accepted:
+        - "i will take it"            # 'i'll take it' normalises to this
+        - "i will take this"
+        - "i will take this one"
+        - "i will take it please"
+        - "i will buy it"
+        - "i will buy this"
+        - "i would like to buy it"
+        - "i would like to buy this"
+        - "i want to buy this"
+      common_errors:
+        # Simple present for a decision made now — "I take it".
+        - id: present_for_decision
+          pattern: '^i (?P<verb>take|buy) (?P<obj>it|this|this one)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: I'll {verb} {obj}."
+          why: >-
+            When you decide right now, English uses 'I'll': 'I'll take it',
+            not 'I take it'.
+          example: "i take it"
+          correction_example: "i will take it"
+        # Missing object — "I will take".
+        - id: take_missing_it
+          pattern: '^i will (?:take|buy)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: I'll take it. — don't forget 'it'."
+          why: >-
+            'Take' needs an object in English: 'I'll take IT'.
+          example: "i will take"
+          correction_example: "i will take it"
+      follow_up: "Great. That's eight hundred rupees."

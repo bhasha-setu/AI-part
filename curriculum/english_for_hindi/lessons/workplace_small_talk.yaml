@@ -1,0 +1,191 @@
+# DRAFT — seed content for the voice tutor. NOT pedagogically reviewed.
+# Target: Hindi-speaking learners at A2 (CEFR). Scenario: small talk with a colleague.
+# Error patterns target typical L1-Hindi transfer errors: question word order,
+# present perfect / present for finished past ("I have gone yesterday"),
+# "too much busy", "I am having work", "let's we go".
+scenario:
+  id: workplace_small_talk
+  title: Small talk at work
+  can_do: "Chat with a colleague: ask about the weekend, say what you did, say work is busy, and suggest lunch or tea."
+  # DRAFT dialogue. Not reviewed by a teacher. Audio is null until TTS exists.
+  model_dialogue:
+    - {speaker: "Neha", text: "Good morning, Arjun! How was your weekend?", audio: null}
+    - {speaker: "Arjun", text: "It was great. I went to Lonavala with my family.", audio: null}
+    - {speaker: "Neha", text: "That sounds lovely!", audio: null}
+    - {speaker: "Arjun", text: "How about you? How is work?", audio: null}
+    - {speaker: "Neha", text: "I am very busy this week. We have a big project.", audio: null}
+    - {speaker: "Arjun", text: "Then you need a break. Would you like to have lunch together?", audio: null}
+    - {speaker: "Neha", text: "Yes, good idea! Let's go at one o'clock.", audio: null}
+  useful_language:
+    - {phrase: "How was your weekend?", meaning: "to ask about someone's Saturday and Sunday", used_by: [work_ask_weekend]}
+    - {phrase: "I went to ...", meaning: "to say where you went (past tense)", used_by: [work_say_weekend]}
+    - {phrase: "I am very busy this week.", meaning: "to say you have a lot of work", used_by: [work_busy]}
+    - {phrase: "Would you like to have lunch together?", meaning: "to invite a colleague politely", used_by: [work_suggest_lunch]}
+  items:
+    - id: work_ask_weekend
+      scenario: workplace_small_talk
+      prompt: "It is Monday morning at the office. Ask your colleague about their Saturday and Sunday."
+      cue: "Weekend → ? (ask)"
+      first_words: "How was…"
+      model_answer: "How was your weekend?"
+      accepted:
+        - "how was your weekend"
+        - "how was the weekend"
+        - "hi how was your weekend"
+        - "hey how was your weekend"
+        - "good morning how was your weekend"
+        - "did you have a good weekend"
+        - "did you have a nice weekend"
+        - "how did your weekend go"
+        - "what did you do on the weekend"
+        - "what did you do at the weekend"
+      common_errors:
+        # Statement word order in a question — "how your weekend was?".
+        - id: weekend_word_order
+          pattern: '^(?:hi |hey |good morning )?how (?:your|the) weekend was$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: How was your weekend? — 'was' comes before 'your weekend'."
+          why: >-
+            In English questions, the verb moves before the subject:
+            'How WAS your weekend?', not 'How your weekend was?'.
+          example: "how your weekend was"
+          correction_example: "how was your weekend"
+        # Missing determiner — "how was weekend".
+        - id: weekend_missing_your
+          pattern: '^(?:hi |hey |good morning )?how was weekend$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: How was your weekend? — add 'your'."
+          why: >-
+            English needs a small word before 'weekend' here: 'your weekend'
+            or 'the weekend'.
+          example: "how was weekend"
+          correction_example: "how was your weekend"
+      follow_up: "It was nice, thanks! And what did you do?"
+
+    - id: work_say_weekend
+      scenario: workplace_small_talk
+      prompt: "Your colleague asks what you did on Sunday. Tell them about a place you visited."
+      cue: "Sunday → ? (past)"
+      first_words: "I went…"
+      model_answer: "I went to {place} with my family."
+      accepted:
+        - "i went to {place} with my family"
+        - "i went to {place} with {who}"
+        - "i went to {place}"
+        - "i visited {place}"
+        - "i stayed at home"
+        - "i stayed home"
+        - "i watched a movie"
+        - "i watched a film"
+        - "i met my friends"
+        - "i relaxed at home"
+      common_errors:
+        # Present perfect with a finished time — "I have gone ... on Sunday".
+        - id: present_perfect_finished_time
+          pattern: '^i have (?:gone|went|been) to (?P<place>.+?) (?:on sunday|on saturday|yesterday|last weekend|on the weekend)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: I went to {place}. — Sunday is finished, so use 'went'."
+          why: >-
+            With a finished time like 'on Sunday' or 'yesterday', English uses
+            the simple past: 'I went', not 'I have gone'.
+          example: "i have gone to the market on sunday"
+          correction_example: "i went to the market on sunday"
+        # Present tense for the past — "I go ... yesterday".
+        - id: present_for_past
+          pattern: '^i go to (?P<place>.+?) (?:yesterday|last weekend|last sunday|last saturday)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: I went to {place}. — use the past tense 'went'."
+          why: >-
+            For something that already happened, change 'go' to 'went':
+            'Yesterday I went to the market.'
+          example: "i go to the market yesterday"
+          correction_example: "i went to the market yesterday"
+      follow_up: "That sounds nice! Did you have a good time?"
+
+    - id: work_busy
+      scenario: workplace_small_talk
+      prompt: "Your colleague asks how work is going. You have a lot to do this week. Tell them."
+      cue: "Work → ? (a lot)"
+      first_words: "I am very…"
+      model_answer: "I am very busy this week."
+      accepted:
+        - "i am very busy this week"     # "i'm very busy" normalises to this
+        - "i am really busy this week"
+        - "i am quite busy this week"
+        - "i am so busy this week"
+        - "i am very busy"
+        - "i am really busy"
+        - "i have a lot of work this week"
+        - "i have a lot of work"
+        - "i have lots of work this week"
+        - "it is a busy week"
+      common_errors:
+        # "Too much busy" — Hindi "bahut zyada" mapped to 'too much'.
+        - id: too_much_busy
+          pattern: '^i am (?:too much|very much|so much) busy(?P<rest>.*)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: I am very busy this week."
+          why: >-
+            Before an adjective like 'busy', use 'very' or 'really', not
+            'too much'. 'Very much' and 'too much' go with nouns and verbs.
+          example: "i am too much busy this week"
+          correction_example: "i am very busy this week"
+        # Progressive with 'have' — "I am having a lot of work".
+        - id: am_having_work
+          pattern: '^i am having (?P<rest>(?:a lot of|lots of|so much|too much|much) work.*)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: I have {rest}."
+          why: >-
+            'Have' meaning 'own' or 'hold' does not take -ing. Say 'I have a
+            lot of work', not 'I am having a lot of work'.
+          example: "i am having a lot of work this week"
+          correction_example: "i have a lot of work this week"
+      follow_up: "Oh no! What are you working on?"
+
+    - id: work_suggest_lunch
+      scenario: workplace_small_talk
+      prompt: "It is almost one o'clock. Invite your colleague to eat with you."
+      cue: "Lunch → ? (invite)"
+      first_words: "Would you like…"
+      model_answer: "Would you like to have lunch together?"
+      accepted:
+        - "would you like to have lunch together"
+        - "would you like to have lunch"
+        - "would you like to have lunch with me"
+        - "would you like to go for lunch"
+        - "would you like to have some tea"
+        - "would you like to get some tea"
+        - "shall we have lunch together"
+        - "shall we get some tea"
+        - "let us have lunch together"      # "let's" normalises to "let us"
+        - "let us go for lunch"
+      common_errors:
+        # Extra subject after "let's" — "let's we go".
+        - id: lets_we
+          pattern: '^let us we (?P<rest>.+)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: Let's {rest}. — 'let's' already means 'let us', so drop 'we'."
+          why: >-
+            'Let's' already includes 'us'. Say 'Let's go for lunch', not
+            'Let's we go for lunch'.
+          example: "let's we go for lunch"
+          correction_example: "let's go for lunch"
+        # Statement used as an invitation — "you will come for lunch?".
+        - id: you_will_come
+          pattern: '^you will (?:come|go|have) (?:for )?(?P<what>lunch|tea|coffee)(?: with me| together)?$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: Would you like to have {what}?"
+          why: >-
+            'You will come for lunch?' sounds like an order. To invite someone
+            politely, ask 'Would you like to ...?'.
+          example: "you will come for lunch"
+          correction_example: "would you like to have lunch"
+      follow_up: "Sure, I'd love to. Where shall we go?"

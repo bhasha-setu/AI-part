@@ -1,0 +1,168 @@
+# DRAFT — seed content for the voice tutor. NOT pedagogically reviewed.
+# Target: Hindi-speaking learners at A1 (CEFR). Scenario: numbers, time and money.
+# Error patterns target typical L1-Hindi transfer errors: statement word order in
+# questions, "how much time is it" (kitne baje), missing copula, "does this costs".
+scenario:
+  id: numbers_time_money
+  title: Numbers, time and money
+  can_do: "Ask the time, say your age and phone number, and ask how much something costs."
+  # DRAFT dialogue. Not reviewed by a teacher. Audio is null until TTS exists.
+  model_dialogue:
+    - {speaker: "Vikram", text: "Excuse me, what time is it?", audio: null}
+    - {speaker: "Sunita", text: "It is four thirty.", audio: null}
+    - {speaker: "Vikram", text: "Thanks. I am twenty years old, and I am new here.", audio: null}
+    - {speaker: "Sunita", text: "Welcome! What is your phone number?", audio: null}
+    - {speaker: "Vikram", text: "My number is nine eight seven six five.", audio: null}
+    - {speaker: "Sunita", text: "Let's buy some mangoes. Look, a fruit stall.", audio: null}
+    - {speaker: "Vikram", text: "How much does this cost?", audio: null}
+    - {speaker: "Seller", text: "Thirty rupees.", audio: null}
+  useful_language:
+    - {phrase: "What time is it?", meaning: "to ask the time", used_by: [numbers_ask_time]}
+    - {phrase: "I am ... years old.", meaning: "to say your age", used_by: [numbers_age]}
+    - {phrase: "My number is ...", meaning: "to give your phone number", used_by: [numbers_phone]}
+    - {phrase: "How much does this cost?", meaning: "to ask a price", used_by: [numbers_cost]}
+  items:
+    - id: numbers_ask_time
+      scenario: numbers_time_money
+      prompt: "You don't have a watch. Ask a stranger for the time."
+      cue: "Time → ? (ask)"
+      first_words: "What time…"
+      model_answer: "What time is it?"
+      accepted:
+        - "what time is it"
+        - "what time is it now"
+        - "excuse me what time is it"
+        - "what is the time"
+        - "what is the time now"
+        - "do you know the time"
+        - "do you know what time it is"
+        - "can you tell me the time"
+        - "could you tell me the time"
+      common_errors:
+        # Question word order — "What time it is?".
+        - id: time_question_word_order
+          pattern: '^(?:excuse me )?what time it is(?: now)?$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: What time is it? — 'is' comes before 'it' in a question."
+          why: >-
+            In English questions the verb moves before the subject:
+            'What time IS it?', not 'What time it is?'.
+          example: "what time it is"
+          correction_example: "what time is it"
+        # "kitne baje" → "how much time".
+        - id: how_much_time
+          pattern: '^how much time (?:is it|it is|is this|is there)?(?: now)?$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: What time is it?"
+          why: >-
+            To ask the clock time, English says 'What time is it?'.
+            'How much time' asks how long something takes.
+          example: "how much time is it"
+          correction_example: "what time is it"
+      follow_up: "It's four thirty."
+
+    - id: numbers_age
+      scenario: numbers_time_money
+      prompt: "A new friend asks how old you are. Answer."
+      cue: "Age → ?"
+      first_words: "I am…"
+      model_answer: "I am {age} years old."
+      accepted:
+        - "i am {age} years old"
+        - "i am {age} years"
+        - "i am {age}"
+        - "my age is {age} years"
+        - "my age is {age}"
+      common_errors:
+        # Missing copula — "I twenty years old".
+        - id: age_missing_am
+          pattern: '^i (?!am )(?P<age>\S+) years?(?: old)?$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: I am {age} years old."
+          why: >-
+            English needs the verb 'am' here: 'I AM twenty years old'.
+            Hindi can leave it out, English cannot.
+          example: "i twenty years old"
+          correction_example: "i am twenty years old"
+        # Missing copula — "My age twenty".
+        - id: my_age_missing_is
+          pattern: '^my age (?!is )(?P<age>.+)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: My age is {age}."
+          why: >-
+            English keeps the verb 'is': 'My age IS twenty'.
+          example: "my age twenty"
+          correction_example: "my age is twenty"
+      follow_up: null
+
+    - id: numbers_phone
+      scenario: numbers_time_money
+      prompt: "Your new friend wants to call you. Tell them your mobile number."
+      cue: "Phone → ?"
+      first_words: "My number…"
+      model_answer: "My number is {number}."
+      accepted:
+        - "my number is {number}"
+        - "my phone number is {number}"
+        - "my mobile number is {number}"
+        - "my contact number is {number}"
+        - "it is {number}"
+      common_errors:
+        # Missing copula — "My number nine eight seven".
+        - id: number_missing_is
+          pattern: '^my (?:phone |mobile |contact )?number (?!is )(?P<number>.+)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: My number is {number}."
+          why: >-
+            English keeps the verb 'is': 'My number IS 98765...'.
+          example: "my number nine eight seven six"
+          correction_example: "my number is nine eight seven six"
+      follow_up: "Thanks, I'll call you."
+
+    - id: numbers_cost
+      scenario: numbers_time_money
+      prompt: "You pick up a mango at a fruit stall. Ask the seller the price."
+      cue: "Price → ? (ask)"
+      first_words: "How much…"
+      model_answer: "How much does this cost?"
+      accepted:
+        - "how much does this cost"
+        - "how much does it cost"
+        - "how much does this {item} cost"
+        - "how much does one {item} cost"
+        - "how much is this"
+        - "how much is it"
+        - "how much is this {item}"
+        - "how much is one {item}"
+        - "how much for this"
+        - "what is the price"
+        - "what is the price of this"
+      common_errors:
+        # Question without 'do/does' — "How much this costs?".
+        - id: cost_missing_does
+          pattern: '^how much (?:this|it|the \S+|this \S+) costs?$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: How much does this cost?"
+          why: >-
+            English questions with 'cost' need 'does': 'How much DOES this
+            cost?', not 'How much this costs?'.
+          example: "how much this costs"
+          correction_example: "how much does this cost"
+        # Extra -s after 'does'.
+        - id: does_costs
+          pattern: '^how much does (?:this|it|this \S+) costs$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: How much does this cost? — no 's' after 'does'."
+          why: >-
+            After 'does', use the plain verb: 'does this cost', not
+            'does this costs'.
+          example: "how much does this costs"
+          correction_example: "how much does this cost"
+      follow_up: "Thirty rupees."

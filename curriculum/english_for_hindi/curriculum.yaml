@@ -1,0 +1,24 @@
+# English for Hindi speakers: the voice tutor's curriculum. DRAFT, not teacher-reviewed.
+#
+# Three stages of scenario lessons. Every lesson uses the tutor's method: practise
+# its target phrases with the hint ladder, a roleplay without corrections, a review of
+# 2-3 real mistakes, then spaced review of what was missed.
+#
+# Lesson files (lessons/<id>.yaml) use the guided_practice scenario format and must pass
+# guided_practice's validate_scenario (tests/test_curriculum.py checks every one).
+#
+# Language and level config (normalisation, A1 timings, spaced-review intervals) come
+# from the tutor's course below, so one course id is used for every lesson: the
+# learner's Hindi help level and spaced review carry across stages.
+course: english_for_hindi_a1
+
+stages:
+  - name: Basics
+    goal: "Say who you are and talk about your everyday life in simple sentences."
+    lessons: [introducing_yourself, family_and_home, daily_routine, numbers_time_money]
+  - name: Everyday situations
+    goal: "Get things done in common situations: food, shopping, travel, health."
+    lessons: [ordering_food, shopping, directions_and_transport, doctor_and_pharmacy]
+  - name: Real world
+    goal: "Handle longer, real conversations: calls, interviews, work, problems."
+    lessons: [phone_call_appointment, job_interview, workplace_small_talk, solving_a_problem]

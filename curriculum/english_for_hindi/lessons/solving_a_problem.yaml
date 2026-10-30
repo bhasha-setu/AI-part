@@ -1,0 +1,190 @@
+# DRAFT — seed content for the voice tutor. NOT pedagogically reviewed.
+# Target: Hindi-speaking learners at A2 (CEFR). Scenario: explaining a problem and asking for help at a shop.
+# Error patterns target typical L1-Hindi transfer errors: "is not work",
+# "problem in", "since two days", "it is like this for", "give me refund", "thanks you".
+scenario:
+  id: solving_a_problem
+  title: Solving a problem at a shop
+  can_do: "Explain a problem politely: say what is wrong, say since when, ask for a refund, replacement or repair, and thank the person."
+  # DRAFT dialogue. Not reviewed by a teacher. Audio is null until TTS exists.
+  model_dialogue:
+    - {speaker: "Assistant", text: "Hello, how can I help you?", audio: null}
+    - {speaker: "Meera", text: "Hi. I bought this here last week. My phone is not working.", audio: null}
+    - {speaker: "Assistant", text: "Oh, I'm sorry. How long has it been like this?", audio: null}
+    - {speaker: "Meera", text: "It has been like this for three days.", audio: null}
+    - {speaker: "Assistant", text: "Do you have the bill?", audio: null}
+    - {speaker: "Meera", text: "Yes, here it is. Can I get a replacement, please?", audio: null}
+    - {speaker: "Assistant", text: "Sure. We can give you a new one today.", audio: null}
+    - {speaker: "Meera", text: "Thank you so much for your help.", audio: null}
+  useful_language:
+    - {phrase: "My ... is not working.", meaning: "to say something is broken", used_by: [problem_what_is_wrong]}
+    - {phrase: "It has been like this for ... days.", meaning: "to say how long the problem has lasted", used_by: [problem_how_long]}
+    - {phrase: "Can I get a replacement, please?", meaning: "to ask for a new one (or a refund, or a repair)", used_by: [problem_ask_fix]}
+    - {phrase: "Thank you so much for your help.", meaning: "to thank someone politely", used_by: [problem_thank]}
+  items:
+    - id: problem_what_is_wrong
+      scenario: solving_a_problem
+      prompt: "You bought a phone here last week. Now it does not turn on. Tell the shop assistant what is wrong."
+      cue: "Problem → ?"
+      first_words: "My…"
+      model_answer: "My {item} is not working."
+      accepted:
+        - "my {item} is not working"     # "isn't working" normalises to "is not working"
+        - "my {item} does not work"
+        - "my {item} is broken"
+        - "my {item} stopped working"
+        - "the {item} is not working"
+        - "the {item} does not work"
+        - "the {item} is broken"
+        - "this {item} is not working"
+        - "there is a problem with my {item}"
+        - "there is a problem with the {item}"
+      common_errors:
+        # Wrong verb form — "is not work" / "not working" with no 'is'.
+        - id: not_work_form
+          pattern: '^(?:my|the|this) (?P<item>.+?) (?:is not work|not working|not work|is no working|no working)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: My {item} is not working."
+          why: >-
+            Say 'is not working' (or 'does not work'). 'Is not work' mixes the
+            two, and 'not working' alone needs 'is' before it.
+          example: "my phone is not work"
+          correction_example: "my phone is not working"
+        # Missing article + wrong preposition — "there is problem in my phone".
+        - id: problem_in
+          pattern: '^there is (?:problem (?:in|with)|a problem in) (?:my|the|this) (?P<item>.+)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: There is a problem with my {item}."
+          why: >-
+            English says 'a problem WITH my phone', not 'problem in my
+            phone'. Keep 'a' before 'problem'.
+          example: "there is problem in my phone"
+          correction_example: "there is a problem with my phone"
+      follow_up: "Oh, I'm sorry to hear that. How long has it been like this?"
+
+    - id: problem_how_long
+      scenario: solving_a_problem
+      prompt: "The assistant asks how long the phone has had this problem. Answer: three days."
+      cue: "How long → ?"
+      first_words: "It has been…"
+      model_answer: "It has been like this for {period}."
+      accepted:
+        - "it has been like this for {period}"
+        - "it has been broken for {period}"
+        - "it has not worked for {period}"
+        - "it has not been working for {period}"
+        - "it stopped working {period} ago"
+        - "it has been like this since yesterday"
+        - "it has been like this since last week"
+        - "it stopped working yesterday"
+        - "it stopped working last week"
+        - "for {period}"
+      common_errors:
+        # since / for confusion — "since two days".
+        - id: since_with_duration
+          pattern: '^(?:it (?:is|has been|is not working|has not been working|is like this|has been like this|is broken|has been broken|has not worked) )?since (?P<period>(?:one|two|three|four|five|six|seven|eight|nine|ten|a|a few|few|\d+) (?:day|days|week|weeks|month|months|hour|hours))$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: It has been like this for {period}."
+          why: >-
+            Use 'for' with a length of time (for three days) and 'since' with a
+            starting point (since Monday).
+          example: "it is not working since two days"
+          correction_example: "it has not been working for two days"
+        # Present tense for a time that is still going on — "it is like this for".
+        - id: present_with_for
+          pattern: '^it (?:is|is not working|is like this|is broken|does not work) for (?P<period>.+)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: It has been like this for {period}."
+          why: >-
+            When something started in the past and is still true now, English
+            uses 'has been': 'It has been broken for three days'.
+          example: "it is like this for three days"
+          correction_example: "it has been like this for three days"
+      follow_up: "I see. Do you have the bill with you?"
+
+    - id: problem_ask_fix
+      scenario: solving_a_problem
+      prompt: "You have the bill. You want a new phone instead of this one. Ask the assistant politely."
+      cue: "New one → ? (polite)"
+      first_words: "Can I get…"
+      model_answer: "Can I get a replacement, please?"
+      accepted:
+        - "can i get a replacement please"
+        - "can i get a replacement"
+        - "could i get a replacement please"
+        - "can i get a refund please"
+        - "can i get a refund"
+        - "could i get a refund please"
+        - "can i get my money back please"
+        - "could you replace it please"
+        - "could you repair it please"
+        - "can you repair it please"
+      common_errors:
+        # Dropped article — "can I get refund".
+        - id: fix_missing_article
+          pattern: '^(?:can|could) i (?:get|have) (?P<thing>refund|replacement)(?: please)?$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: Can I get a {thing}, please? — don't forget 'a'."
+          why: >-
+            'Refund' and 'replacement' are one thing you ask for, so they need
+            'a': 'a refund', 'a replacement'.
+          example: "can i get refund please"
+          correction_example: "can i get a refund please"
+        # Direct order, no article — "please give me refund".
+        - id: give_me_refund
+          pattern: '^(?:please )?give me (?P<thing>refund|replacement)(?: please)?$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: Can I get a {thing}, please?"
+          why: >-
+            'Give me refund' sounds rude and misses 'a'. Ask with
+            'Can I get a refund, please?'.
+          example: "please give me refund"
+          correction_example: "can i get a refund please"
+      follow_up: "Sure. We can give you a new one today."
+
+    - id: problem_thank
+      scenario: solving_a_problem
+      prompt: "The assistant has solved your problem. Thank them before you leave."
+      cue: "Thanks → ? (for the help)"
+      first_words: "Thank you…"
+      model_answer: "Thank you so much for your help."
+      accepted:
+        - "thank you so much for your help"
+        - "thank you very much for your help"
+        - "thank you for your help"
+        - "thanks for your help"
+        - "thanks for the help"
+        - "thanks a lot for your help"
+        - "thank you for helping me"
+        - "thank you so much"
+        - "thank you very much"
+        - "thank you"
+      common_errors:
+        # "Thanks you" — mixing 'thanks' and 'thank you'.
+        - id: thanks_you
+          pattern: '^thanks you(?P<rest>.*)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: Thank you so much for your help. — 'thank you' or 'thanks', not 'thanks you'."
+          why: >-
+            Say 'thank you' or 'thanks'. 'Thanks you' mixes the two.
+          example: "thanks you for your help"
+          correction_example: "thank you for your help"
+        # Missing determiner — "thank you for help".
+        - id: for_help_no_your
+          pattern: '^(?:thank you|thanks)(?: so much| very much| a lot)? for help$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: Thank you so much for your help. — add 'your'."
+          why: >-
+            English needs 'your' or 'the' before 'help' here: 'thank you for
+            your help'.
+          example: "thank you for help"
+          correction_example: "thank you for your help"
+      follow_up: "You're welcome! Have a nice day."

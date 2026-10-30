@@ -1,0 +1,190 @@
+# DRAFT — seed content for the voice tutor. NOT pedagogically reviewed.
+# Target: Hindi-speaking learners at A1-A2 (CEFR). Scenario: at the doctor and the pharmacy.
+# Error patterns target typical L1-Hindi transfer errors: "my head is paining", dropped
+# articles, "from two days" / "since two days" (se), "give medicine", statement-order questions.
+scenario:
+  id: doctor_and_pharmacy
+  title: At the doctor and the pharmacy
+  can_do: "Say what is wrong, say how long you have been ill, ask for medicine, and ask how to take it."
+  # DRAFT dialogue. Not reviewed by a teacher. Audio is null until TTS exists.
+  model_dialogue:
+    - {speaker: "Doctor", text: "Hello, Mr Kumar. What is the problem?", audio: null}
+    - {speaker: "Sanjay", text: "I have a headache.", audio: null}
+    - {speaker: "Doctor", text: "How long have you had it?", audio: null}
+    - {speaker: "Sanjay", text: "For two days.", audio: null}
+    - {speaker: "Chemist", text: "Hello. Can I help you?", audio: null}
+    - {speaker: "Sanjay", text: "Do you have something for a cough?", audio: null}
+    - {speaker: "Chemist", text: "Yes, this syrup is good.", audio: null}
+    - {speaker: "Sanjay", text: "How often should I take it?", audio: null}
+  useful_language:
+    - {phrase: "I have a headache.", meaning: "to say your head hurts", used_by: [health_symptom]}
+    - {phrase: "For two days.", meaning: "to say how long you have been ill", used_by: [health_duration]}
+    - {phrase: "Do you have something for a ...?", meaning: "to ask for medicine", used_by: [health_medicine]}
+    - {phrase: "How often should I take it?", meaning: "to ask how to take a medicine", used_by: [health_how_often]}
+  items:
+    - id: health_symptom
+      scenario: doctor_and_pharmacy
+      prompt: "You visit the doctor because of pain in your head. Tell the doctor."
+      cue: "Head pain → ?"
+      first_words: "I have…"
+      model_answer: "I have a headache."
+      accepted:
+        - "i have a {problem}"
+        - "i have an {problem}"
+        - "i have got a {problem}"
+        - "i have fever"
+        - "i have pain in my {part}"
+        - "my {part} hurts"
+        - "my {part} is hurting"
+        - "i am not feeling well"
+        - "i do not feel well"
+        - "i feel sick"
+      common_errors:
+        # "mera sir dard kar raha hai" → "my head is paining".
+        - id: is_paining
+          pattern: '^my (?P<part>\S+) is paining$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: My {part} hurts."
+          why: >-
+            In English a body part 'hurts'. 'Is paining' is not used:
+            say 'My head hurts' or 'I have a headache'.
+          example: "my head is paining"
+          correction_example: "my head hurts"
+        # Dropped article — "I have headache".
+        - id: symptom_missing_a
+          pattern: '^i have (?P<problem>headache|stomachache|stomach ache|toothache|backache|cold|cough|sore throat)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: I have a {problem}."
+          why: >-
+            Before one illness like a headache or a cold, English needs 'a':
+            'I have A headache'.
+          example: "i have headache"
+          correction_example: "i have a headache"
+      follow_up: "I see. How long have you had it?"
+
+    - id: health_duration
+      scenario: doctor_and_pharmacy
+      prompt: "The doctor asks how long you have been ill. It began two days ago. Answer."
+      cue: "How long → ? (2 days)"
+      first_words: "For…"
+      model_answer: "For two days."
+      accepted:
+        - "for {time}"
+        - "since yesterday"
+        - "since last night"
+        - "since this morning"
+        - "since last week"
+        - "i have been sick for {time}"
+        - "i have been ill for {time}"
+        - "i have had it for {time}"
+        - "it started {time} ago"
+        - "it started yesterday"
+      common_errors:
+        # "do din se" → "from two days".
+        - id: from_for_duration
+          pattern: '^(?:i am (?:sick|ill|not well) |it is )?from (?P<time>.+)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: For {time}."
+          why: >-
+            For a length of time, English uses 'for': 'for two days',
+            not 'from two days'.
+          example: "from two days"
+          correction_example: "for two days"
+        # "since" with a length of time.
+        - id: since_for_duration
+          pattern: '^(?:i am (?:sick|ill) |i have been (?:sick|ill) )?since (?P<time>(?:one|two|three|four|five|six|seven|\d+|a few|many) (?:days?|weeks?|months?|hours?))$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: For {time}."
+          why: >-
+            Use 'for' with a length of time ('for two days') and 'since' with
+            a starting point ('since Monday').
+          example: "since two days"
+          correction_example: "for two days"
+      follow_up: null
+
+    - id: health_medicine
+      scenario: doctor_and_pharmacy
+      prompt: "You are at a pharmacy. You have a bad cough. Ask the chemist for help."
+      cue: "Cough → medicine? (ask)"
+      first_words: "Do you have…"
+      model_answer: "Do you have something for a cough?"
+      accepted:
+        - "do you have something for {problem}"
+        - "do you have anything for {problem}"
+        - "do you have any medicine for {problem}"
+        - "do you have medicine for {problem}"
+        - "can i have something for {problem}"
+        - "can i have some medicine for {problem}"
+        - "can i have {thing} please"
+        - "i need something for {problem}"
+        - "i need medicine for {problem}"
+        - "can you give me something for {problem}"
+      common_errors:
+        # "dawai dena" → "Give medicine" (sounds rude).
+        - id: bare_give
+          pattern: '^give(?: me)? (?P<thing>.*(?:medicine|tablet|tablets|syrup).*)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: Can I have {thing}, please?"
+          why: >-
+            'Give medicine' sounds like an order. Ask politely with 'Can I
+            have ..., please?' or 'Do you have ...?'.
+          example: "give cough medicine"
+          correction_example: "can i have cough medicine please"
+        # Question by intonation only — "You have medicine for cough?".
+        - id: medicine_question_without_do
+          pattern: '^you have (?P<rest>.+)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: Do you have {rest}?"
+          why: >-
+            English questions need 'do' at the start: 'DO you have something
+            for a cough?'.
+          example: "you have medicine for cough"
+          correction_example: "do you have medicine for a cough"
+      follow_up: "Yes, this syrup is good for a cough."
+
+    - id: health_how_often
+      scenario: doctor_and_pharmacy
+      prompt: "The chemist gives you a syrup. Ask how many times a day to drink it."
+      cue: "Times a day → ? (ask)"
+      first_words: "How often…"
+      model_answer: "How often should I take it?"
+      accepted:
+        - "how often should i take it"
+        - "how often do i take it"
+        - "how often should i take this"
+        - "how many times a day"
+        - "how many times a day should i take it"
+        - "how many times should i take it"
+        - "how should i take it"
+        - "how do i take it"
+        - "when should i take it"
+      common_errors:
+        # Statement word order in a question.
+        - id: should_word_order
+          pattern: '^(?P<qw>how many times|how often|when|how) i (?:should|have to|can|will) take (?P<rest>.+?)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: {qw} should I take {rest}? — 'should' comes before 'I'."
+          why: >-
+            In English questions, 'should' moves before 'I':
+            'How often SHOULD I take it?'.
+          example: "how many times i should take it"
+          correction_example: "how many times should i take it"
+        # Hindi word order — "din mein kitni baar".
+        - id: in_one_day_first
+          pattern: '^in (?:one|a) day how many times(?: .*)?$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: How many times a day?"
+          why: >-
+            English starts with the question words: 'How many times a day?',
+            not 'In one day how many times?'.
+          example: "in one day how many times"
+          correction_example: "how many times a day"
+      follow_up: "Two times a day, after food."

@@ -1,0 +1,181 @@
+# DRAFT — seed content for the voice tutor. NOT pedagogically reviewed.
+# Target: Hindi-speaking learners at A1 (CEFR). Scenario: describing your daily routine.
+# Error patterns target typical L1-Hindi transfer errors: present continuous for habits
+# ("I am waking up daily"), missing 'at' and 'the', "from bus" for "by bus".
+scenario:
+  id: daily_routine
+  title: Your daily routine
+  can_do: "Describe your day: when you wake up, what you do in the morning, how you go to work or college, and your evening."
+  # DRAFT dialogue. Not reviewed by a teacher. Audio is null until TTS exists.
+  model_dialogue:
+    - {speaker: "Neha", text: "Rahul, when do you wake up?", audio: null}
+    - {speaker: "Rahul", text: "I wake up at six.", audio: null}
+    - {speaker: "Neha", text: "What do you do in the morning?", audio: null}
+    - {speaker: "Rahul", text: "I have breakfast in the morning.", audio: null}
+    - {speaker: "Neha", text: "How do you go to work?", audio: null}
+    - {speaker: "Rahul", text: "I go to work by bus.", audio: null}
+    - {speaker: "Neha", text: "And what do you do after work?", audio: null}
+    - {speaker: "Rahul", text: "I watch TV in the evening.", audio: null}
+  useful_language:
+    - {phrase: "I wake up at ...", meaning: "to say the time you get out of bed", used_by: [routine_wake]}
+    - {phrase: "I have breakfast in the morning.", meaning: "to say what you do every morning", used_by: [routine_morning]}
+    - {phrase: "I go to work by bus.", meaning: "to say how you travel every day", used_by: [routine_commute]}
+    - {phrase: "I watch TV in the evening.", meaning: "to say what you do after work", used_by: [routine_evening]}
+  items:
+    - id: routine_wake
+      scenario: daily_routine
+      prompt: "Your friend asks what time you get out of bed every day. Answer."
+      cue: "Wake up → ? (time)"
+      first_words: "I wake up…"
+      model_answer: "I wake up at {time}."
+      accepted:
+        - "i wake up at {time}"
+        - "i get up at {time}"
+        - "i usually wake up at {time}"
+        - "i usually get up at {time}"
+        - "i wake up every day at {time}"
+        - "i wake at {time}"
+        - "at {time}"
+      common_errors:
+        # Present continuous for a habit — "I am waking up at six daily".
+        - id: continuous_for_habit
+          pattern: '^i am (?:waking|getting) up (?:at )?(?P<time>.+?)(?: daily| every day| everyday)?$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: I wake up at {time}."
+          why: >-
+            For something you do every day, use the simple form: 'I wake up',
+            not 'I am waking up'.
+          example: "i am waking up at six daily"
+          correction_example: "i wake up at six"
+        # Missing 'at' before a clock time.
+        - id: missing_at_time
+          pattern: '^i (?:wake|get) up (?P<time>(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b.*)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: I wake up at {time}."
+          why: >-
+            Put 'at' before a clock time: 'at six', 'at seven thirty'.
+          example: "i wake up six"
+          correction_example: "i wake up at six"
+      follow_up: "That's early! What do you do next?"
+
+    - id: routine_morning
+      scenario: daily_routine
+      prompt: "Your friend asks what you do every morning. Say you eat your first meal of the day."
+      cue: "Morning → ? (food)"
+      first_words: "I have…"
+      model_answer: "I have breakfast in the morning."
+      accepted:
+        - "i have breakfast in the morning"
+        - "i have breakfast"
+        - "i eat breakfast"
+        - "i eat breakfast in the morning"
+        - "in the morning i have {thing}"
+        - "i have {thing} in the morning"
+        - "i have {thing} every morning"
+        - "every morning i have {thing}"
+        - "i drink {thing} in the morning"
+        - "in the morning i drink {thing}"
+      common_errors:
+        # Present continuous for a habit — "I am having breakfast daily".
+        - id: continuous_for_habit_morning
+          pattern: '^i am (?:having|eating) (?P<thing>.+?)(?: daily| every day| everyday| every morning| in the morning)?$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: I have {thing} every morning."
+          why: >-
+            For a daily habit, use 'I have', not 'I am having'. 'I am having'
+            means right now.
+          example: "i am having breakfast daily"
+          correction_example: "i have breakfast in the morning"
+        # Missing 'the' — "in morning".
+        - id: in_morning_missing_the
+          pattern: '^(?P<rest>.+) in morning$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: {rest} in the morning."
+          why: >-
+            English says 'in the morning' and 'in the evening', with 'the'.
+          example: "i have breakfast in morning"
+          correction_example: "i have breakfast in the morning"
+      follow_up: null
+
+    - id: routine_commute
+      scenario: daily_routine
+      prompt: "Your friend asks how you travel to your office. You take the bus. Answer."
+      cue: "Office → ? (how)"
+      first_words: "I go to…"
+      model_answer: "I go to work by bus."
+      accepted:
+        - "i go to {place} by {transport}"
+        - "i go to {place} by {transport} every day"
+        - "i go by {transport}"
+        - "i travel by {transport}"
+        - "by {transport}"
+        - "i take the {transport}"
+        - "i take a {transport}"
+        - "i walk to {place}"
+        - "i go to {place} on foot"
+      common_errors:
+        # "bus se" → "from bus" / "with bus".
+        - id: from_bus
+          pattern: '^i go (?:to (?P<place>.+?) )?(?:from|with) (?:the |a )?(?P<transport>bus|train|metro|car|bike|scooter|auto|taxi|cycle|bicycle|rickshaw)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: I go by {transport}."
+          why: >-
+            For how you travel, English uses 'by': 'by bus', 'by train',
+            not 'from bus'.
+          example: "i go to work from bus"
+          correction_example: "i go to work by bus"
+        # Present continuous for a habit — "I am going to office daily".
+        - id: continuous_for_habit_commute
+          pattern: '^i am going (?P<rest>.+?) (?:daily|every day|everyday)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: I go {rest} every day."
+          why: >-
+            For something you do every day, use 'I go', not 'I am going'.
+          example: "i am going to work by bus daily"
+          correction_example: "i go to work by bus"
+      follow_up: null
+
+    - id: routine_evening
+      scenario: daily_routine
+      prompt: "Your friend asks what you do after work. Say you watch television."
+      cue: "Evening → ?"
+      first_words: "I watch…"
+      model_answer: "I watch TV in the evening."
+      accepted:
+        - "i watch tv in the evening"
+        - "i watch tv"
+        - "in the evening i watch tv"
+        - "i watch television in the evening"
+        - "i watch {thing} in the evening"
+        - "i watch {thing} every evening"
+        - "in the evening i watch {thing}"
+        - "i usually watch {thing}"
+      common_errors:
+        # Present continuous for a habit.
+        - id: continuous_for_habit_evening
+          pattern: '^i am watching (?P<thing>.+?)(?: daily| every day| everyday| every evening| in the evening)?$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: I watch {thing} in the evening."
+          why: >-
+            For a daily habit, use 'I watch', not 'I am watching'.
+            'I am watching' means right now.
+          example: "i am watching tv daily"
+          correction_example: "i watch tv in the evening"
+        # Missing 'the' — "in evening".
+        - id: in_evening_missing_the
+          pattern: '^(?P<rest>.+) in evening$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: {rest} in the evening."
+          why: >-
+            English says 'in the evening', with 'the'.
+          example: "i watch tv in evening"
+          correction_example: "i watch tv in the evening"
+      follow_up: "Nice. What do you like to watch?"

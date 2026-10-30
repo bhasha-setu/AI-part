@@ -1,0 +1,192 @@
+# DRAFT — seed content for the voice tutor. NOT pedagogically reviewed.
+# Target: Hindi-speaking learners at A2 (CEFR). Scenario: a phone call to book an appointment.
+# Error patterns target typical L1-Hindi / Indian-English transfer errors:
+# "myself Ravi", "Ravi this side", "take appointment", "on 5 pm", "repeat again".
+scenario:
+  id: phone_call_appointment
+  title: Booking an appointment on the phone
+  can_do: "Call a clinic or office: say who is calling, ask for an appointment, agree a day and time, and ask them to repeat."
+  # DRAFT dialogue. Not reviewed by a teacher. Audio is null until TTS exists.
+  model_dialogue:
+    - {speaker: "Receptionist", text: "Good morning, City Clinic. How can I help you?", audio: null}
+    - {speaker: "Ravi", text: "Hello, this is Ravi Sharma calling.", audio: null}
+    - {speaker: "Receptionist", text: "Hello, Mr Sharma. What can I do for you?", audio: null}
+    - {speaker: "Ravi", text: "I would like to book an appointment, please.", audio: null}
+    - {speaker: "Receptionist", text: "Sure. When can you come?", audio: null}
+    - {speaker: "Ravi", text: "Can I come on Monday at 5 pm?", audio: null}
+    - {speaker: "Receptionist", text: "Yes, that is fine. You will see Dr Iyer.", audio: null}
+    - {speaker: "Ravi", text: "Sorry, could you repeat that, please?", audio: null}
+    - {speaker: "Receptionist", text: "Of course. Dr Iyer: I, Y, E, R.", audio: null}
+    - {speaker: "Ravi", text: "Thank you. See you on Monday.", audio: null}
+  useful_language:
+    - {phrase: "Hello, this is ... calling.", meaning: "to say who you are on the phone", used_by: [phone_who_is_calling]}
+    - {phrase: "I would like to book an appointment.", meaning: "to ask for a time to visit", used_by: [phone_book_appointment]}
+    - {phrase: "Can I come on Monday at 5 pm?", meaning: "to suggest a day (on) and a time (at)", used_by: [phone_suggest_time]}
+    - {phrase: "Sorry, could you repeat that, please?", meaning: "to ask someone to say something again", used_by: [phone_ask_repeat]}
+  items:
+    - id: phone_who_is_calling
+      scenario: phone_call_appointment
+      prompt: "You phone a clinic. The receptionist picks up. Greet her and tell her your name."
+      cue: "Hello + your name → ?"
+      first_words: "Hello, this is…"
+      model_answer: "Hello, this is {name} calling."
+      accepted:
+        - "hello this is {name} calling"
+        - "hello this is {name}"
+        - "hi this is {name} calling"
+        - "hi this is {name}"
+        - "this is {name} calling"
+        - "this is {name}"
+        - "hello my name is {name}"
+        - "hello i am {name}"          # "hello, i'm ravi" normalises to this
+        - "good morning this is {name} calling"
+        - "good morning this is {name}"
+      common_errors:
+        # "Myself Ravi": a very common Indian-English way to introduce yourself.
+        - id: myself_name
+          pattern: '^(?:hello |hi |good morning )?myself (?P<name>.+)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: Hello, this is {name} calling."
+          why: >-
+            'Myself' cannot start a sentence in English. On the phone, say
+            'This is Ravi' or 'My name is Ravi'.
+          example: "hello myself ravi"
+          correction_example: "hello this is ravi calling"
+        # "Ravi this side": Indian-English phone opener, not understood everywhere.
+        - id: name_this_side
+          pattern: '^(?:hello |hi |good morning )?(?P<name>.+?) this side$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: Hello, this is {name} calling."
+          why: >-
+            'Ravi this side' is not standard English. On the phone, put
+            'this is' first: 'This is Ravi calling.'
+          example: "hello ravi this side"
+          correction_example: "hello this is ravi calling"
+      follow_up: "Hello! How can I help you today?"
+
+    - id: phone_book_appointment
+      scenario: phone_call_appointment
+      prompt: "The receptionist asks how she can help. You want to see the doctor. Ask politely."
+      cue: "Appointment → ? (polite)"
+      first_words: "I would like…"
+      model_answer: "I would like to book an appointment, please."
+      accepted:
+        - "i would like to book an appointment please"   # "i'd like" normalises to "i would like"
+        - "i would like to book an appointment"
+        - "i would like to make an appointment please"
+        - "i would like to make an appointment"
+        - "i would like an appointment please"
+        - "i want to book an appointment"
+        - "can i book an appointment please"
+        - "can i book an appointment"
+        - "could i book an appointment please"
+        - "could i make an appointment please"
+      common_errors:
+        # Dropped article — "book appointment".
+        - id: appointment_missing_an
+          pattern: '^(?:i would like|i want) to (?:book|make) appointment(?: please)?$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: I would like to book an appointment, please. — don't forget 'an'."
+          why: >-
+            'Appointment' is one thing you can count, so it needs 'an' before it:
+            'an appointment'.
+          example: "i want to book appointment"
+          correction_example: "i want to book an appointment"
+        # "Take an appointment" — translated from Hindi "appointment lena".
+        - id: take_appointment
+          pattern: '^(?:i would like|i want) to take (?:an )?appointment(?: please)?$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: I would like to book an appointment, please."
+          why: >-
+            In English you 'book' or 'make' an appointment. 'Take an
+            appointment' comes from Hindi and sounds strange.
+          example: "i want to take an appointment"
+          correction_example: "i want to book an appointment"
+      follow_up: "Sure. When would you like to come?"
+
+    - id: phone_suggest_time
+      scenario: phone_call_appointment
+      prompt: "The receptionist asks when you can come. Suggest a day and a time."
+      cue: "Day + time → ? (ask)"
+      first_words: "Can I come…"
+      model_answer: "Can I come on {day} at {time}?"
+      accepted:
+        - "can i come on {day} at {time}"
+        - "can i come on {day} at {time} please"
+        - "could i come on {day} at {time}"
+        - "could i come on {day} at {time} please"
+        - "can i come at {time} on {day}"
+        - "could i come at {time} on {day}"
+        - "is {day} at {time} okay"
+        - "is {day} at {time} ok"
+        - "is {day} at {time} possible"
+        - "how about {day} at {time}"
+      common_errors:
+        # Wrong preposition before a clock time — "on 5 pm" / "in 5 pm".
+        - id: time_wrong_preposition
+          pattern: '^(?:can|could) i come on (?P<day>\S+) (?:on|in) (?P<time>.+)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: Can I come on {day} at {time}? — use 'at' before a clock time."
+          why: >-
+            English uses 'on' for days and 'at' for clock times:
+            'on Monday at 5 pm'.
+          example: "can i come on monday on 5 pm"
+          correction_example: "can i come on monday at 5 pm"
+        # Wrong preposition before a day — "in Monday" / "at Monday".
+        - id: day_wrong_preposition
+          pattern: '^(?:can|could) i come (?:in|at) (?P<day>monday|tuesday|wednesday|thursday|friday|saturday|sunday) at (?P<time>.+)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: Can I come on {day} at {time}? — use 'on' before a day."
+          why: >-
+            Days of the week take 'on': 'on Monday', not 'in Monday'.
+          example: "can i come in monday at 5 pm"
+          correction_example: "can i come on monday at 5 pm"
+      follow_up: "Yes, that time is free. Can I have your phone number?"
+
+    - id: phone_ask_repeat
+      scenario: phone_call_appointment
+      prompt: "The receptionist says the doctor's name, but the line is bad and you did not hear it. Ask her to say it again."
+      cue: "Didn't hear → ? (polite)"
+      first_words: "Sorry, could you…"
+      model_answer: "Sorry, could you repeat that, please?"
+      accepted:
+        - "sorry could you repeat that please"
+        - "sorry could you repeat that"
+        - "could you repeat that please"
+        - "can you repeat that please"
+        - "sorry can you repeat that please"
+        - "sorry could you say that again please"
+        - "could you say that again please"
+        - "sorry could you spell that please"
+        - "could you spell that please"
+        - "can you spell that please"
+      common_errors:
+        # "Repeat again" — doubled meaning, common in Indian English.
+        - id: repeat_again
+          pattern: '^(?:sorry )?(?:(?:can|could) you )?(?:please )?repeat (?:it |that )?again(?: please)?$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: Sorry, could you repeat that, please?"
+          why: >-
+            'Repeat' already means 'say again', so don't add 'again'.
+            Say 'repeat that' or 'say that again'.
+          example: "can you repeat again"
+          correction_example: "can you repeat that please"
+        # Statement word order in a question — "what you said?".
+        - id: what_you_said
+          pattern: '^(?:sorry )?what you (?:said|say|told)$'
+          regex: true
+          verdict: surface_error
+          feedback: "Say: Sorry, could you repeat that, please?"
+          why: >-
+            'What you said?' is not a question in English. To ask politely, say
+            'Could you repeat that, please?'
+          example: "sorry what you said"
+          correction_example: "sorry could you repeat that please"
+      follow_up: "Of course. The doctor's name is Dr Iyer: I, Y, E, R."
