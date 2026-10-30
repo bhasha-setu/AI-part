@@ -1,0 +1,57 @@
+# Experiment 2: cascaded speech-to-speech (STT -> LLM -> TTS).
+# Numbers here are starting points; tune them with `python -m cascade.bench`.
+
+stt:
+  engine: mlx             # mlx (Apple GPU) | faster-whisper (CPU, ~5x slower)
+  model: large-v3-turbo   # ~1.5 s with detect_model small; best Hindi so far. "small" alone:
+                          # ~0.6 s, but more Hindi spelling errors.
+  detect_model: small     # mlx only: a smaller model picks the language (saves ~1 s with
+                          # large-v3-turbo). Empty = the model itself.
+  languages: [en, hi]     # detection is restricted to these (Whisper often hears Hindi as Urdu)
+  vad_filter: true        # trim silence first; Whisper invents "Thank you." on silence
+  # faster-whisper only:
+  device: cpu
+  compute_type: int8
+  beam_size: 1
+
+llm:
+  # Tried in order; a provider that fails (429, timeout) is skipped for cooldown_seconds.
+  # For each key_env, KEY, KEY_2, KEY_3 ... are all picked up from the repo-root .env.
+  providers:
+    - type: gemini
+      key_env: GEMINI_API_KEY
+      model: gemini-3.5-flash-lite
+      thinking_level: minimal        # ~0.72 s vs ~1.0 s with default thinking
+    - type: openai_compat            # NVIDIA hosted models (build.nvidia.com)
+      label: nvidia
+      key_env: NVIDIA_API_KEY
+      base_url: https://integrate.api.nvidia.com/v1
+      model: meta/llama-3.1-8b-instruct   # check what your key can use: python -m cascade.bench --list-nvidia-models
+  cooldown_seconds: 60
+  timeout_seconds: 15
+  max_output_tokens: 300
+  max_history_turns: 12
+  system_prompt: |
+    You are a friendly English speaking partner for a Hindi speaker who knows some
+    English (beginner to intermediate). This is a spoken conversation: your reply is
+    read aloud by a text-to-speech voice.
+    - Keep replies short: one to three simple sentences, then one easy question to keep
+      them talking.
+    - Use simple, everyday English. The learner may speak Hindi, English or a mix; that
+      is fine. If they use Hindi, give the English way to say it, briefly.
+    - Write any Hindi in Devanagari script (never Roman Hindi), so the Hindi voice can
+      read it.
+    - No markdown, lists, emoji or symbols; only words that sound natural when spoken.
+  fallback_reply: "Sorry, I couldn't think of a reply. Please say that again."
+  no_speech_reply: "I didn't hear anything. Please try again."
+
+tts:
+  engine: macos-native    # macos-native (~50 ms to start) | macos-say (~700 ms) | elevenlabs
+  rate: 175               # words per minute (macOS voices); slower helps beginners
+  voices:                 # macOS voices, one per language
+    en: Rishi             # Indian English; Aman and Tara also work
+    hi: Lekha             # needs Devanagari text
+  elevenlabs:
+    key_env: ELEVENLABS_API_KEY
+    model: eleven_flash_v2_5      # lowest-latency model, 0.5 credit/char, supports Hindi
+    voice_id: JBFqnCBsd6RMkjVDRZzb   # placeholder premade voice; pick one in the ElevenLabs voice library

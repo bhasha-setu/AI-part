@@ -1,0 +1,12 @@
+pyyaml>=6.0
+pytest>=7.0
+numpy
+httpx                    # NVIDIA (OpenAI-compatible) LLM and ElevenLabs TTS
+google-genai             # Gemini LLM; not needed with --offline
+sounddevice>=0.4         # mic capture and ElevenLabs playback
+# STT: mlx-whisper on Apple silicon (fast), faster-whisper anywhere else.
+# Models download to ~/.cache/huggingface on first use (large-v3-turbo is ~1.6 GB).
+mlx-whisper; sys_platform == "darwin" and platform_machine == "arm64"
+faster-whisper>=1.0
+# TTS: macOS voices in-process (voices stay loaded: ~30 ms vs ~700 ms for `say`).
+pyobjc-framework-Cocoa; sys_platform == "darwin"

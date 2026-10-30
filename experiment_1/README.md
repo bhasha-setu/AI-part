@@ -1,4 +1,7 @@
-# Language learning core: English for Hindi speakers
+# Experiment 1: pedagogy core (text tutor), English for Hindi speakers
+
+> Paused. Built pedagogy-first, before any voice loop; see the [repo README](../README.md)
+> for why, and [experiment_2](../experiment_2/README.md) for the cascade it will plug into.
 
 The AI core of a speaking-first language app. A Hindi speaker practises English with an
 LLM tutor: they answer by voice or text, in English, Hindi or a mix, and the tutor helps
