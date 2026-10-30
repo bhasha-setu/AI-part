@@ -16,6 +16,33 @@ lesson_headings:
   guided_practice: "Your turn: say it from memory"
   roleplay: "Real conversation"
   assessment: "How you did"
+# --- pedagogy server (DRAFT) ---------------------------------------------------
+# Rule-based fallback lines: used when the LLM judge is not called, is rejected, or
+# its correction is held back by a guardrail. One line per stage, and for guided
+# practice one per verdict and hint level (list index = level 0-3).
+encourage: "Almost. Check your sentence."
+# Retry prompt when a surface error got no correction (held back by a guardrail, or the
+# judge gave none). retry_prompt above assumes a correction was shown.
+retry_without_correction: "Try again: {prompt}"
+fallback_lines:
+  intro: "Continue when you are ready."
+  model_dialogue: "Continue when you are ready."
+  useful_language: "Continue when you are ready."
+  roleplay: "Conversation practice is not ready yet."
+  assessment: "Here is how you did."
+  complete: "Well done. That is the end of this lesson."
+  held: "Let's stop here for now."
+  guided_practice:
+    correct: ["Correct!", "Correct!", "Correct!", "Good — now you've said it. Let's keep that one for review."]
+    surface_error: ["Almost. Check your sentence.", "Almost. Check your sentence.", "Almost. Use the start you were given.", "Almost. Say the whole sentence as shown."]
+    meaning_error: ["Let's try with a little help.", "Let's try with a little help.", "Let's try with a little help.", "Listen to the sentence and try repeating it."]
+    off_topic: ["Let's try with a little help.", "Let's try with a little help.", "Let's try with a little help.", "Listen to the sentence and try repeating it."]
+# Phrases that mark a correction inside a reply. A reply may carry at most one
+# correction in total (counting the correction field). Lower-case, matched as
+# substrings of the case-folded reply. Hypothesis: the eval set will show misses.
+correction_markers: ["say:", "you should say", "instead of", "should be", "the correct form", "try saying", "better to say", "rather than", "we say"]
+# Characters that end a sentence in this UI language, for the reply length cap.
+sentence_terminators: ".!?"
 slot_display:
   name: "[your name]"
   place: "[your city]"

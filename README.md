@@ -19,9 +19,14 @@ its config files. The research basis and the reasoning rules are in
 
 ```bash
 pip install -r requirements.txt
-python3 -m pytest                     # 166 tests (pytest.ini pins testpaths)
+python3 -m pytest                     # 255 tests (pytest.ini pins testpaths)
 python3 -m guided_practice.demo       # writes samples/sample_session.md and sample_lesson.md
+python3 -m pedagogy_server.terminal   # type as the learner (stub judge)
+python3 -m pedagogy_server.eval_runner   # eval/answers.csv through the judge path (stub)
 ```
+
+The pedagogy server (LLM judge, validation, guardrails, fallback) is described under
+"Pedagogy server" below.
 
 `scripts/run_tests.sh` runs the same suite from a bracket-free temp copy. Use it only
 if pytest's collector trips on the `[ 🗣️2🗣️]` in the repo path again.
@@ -124,14 +129,14 @@ After each stage the Lesson calls `policy.after_stage(stage, record, history)` a
 the returned `Decision`:
 
 - `advance` moves on.
-- `repeat` re-runs the stage, capped by `max_stage_attempts`. Guided practice re-presents
-  the same items.
+- `repeat` re-runs the stage, capped by `max_stage_attempts` (2, per Q3). Guided practice
+  re-presents only the items not achieved (Q9).
 - `drop_easier` holds the lesson. Choosing easier content is Step 3.
 - `end` holds the lesson.
 
-`HoldPolicy` is the placeholder. It advances `completed` and `stubbed` stages. It holds on
-`failed` and `skipped` ones (a skipped stage is held, not advanced; Q7 asks whether it
-should be). It is replaced by Step 3.
+`HoldPolicy` is the placeholder. It advances `completed`, `stubbed` and `skipped` stages
+(Q7) and holds on `failed` ones. It is replaced by Step 3. The learner model is committed
+once per lesson, after the guided stage's final attempt (Q6).
 
 ---
 
@@ -423,6 +428,133 @@ UI strings reappear in the core modules.
     take no text.
 60. **A2 sources are hypotheses.** Each A2 threshold is `hypothesis: placeholder copied
     from A1`, so the audit's allowed prefixes still hold.
+
+## Pedagogy server (`pedagogy_server/`)
+
+Transcript in, reply out. STT and TTS are external; `adapters.py` holds their interfaces
+and stubs (`StubSTT`, `StubTTS`, `StubLaptopClient`). Nothing in `guided_practice/` or
+`pedagogy_server/` imports an audio library (a test scans the imports).
+
+```
+transcript -> PedagogyServer.handle()
+   frame (stage, item, hint level, corrections used)          pipeline.py
+   guided practice only:
+     JudgeRequest (no policy internals)                       turn_judge.py, models.py
+     LLMJudge: StubJudge | ScriptedJudge | AnthropicJudge     judge.py
+     validate against the strict schema                       validation.py
+     on rejection: rule-based fallback                        fallback.py
+     guardrails (cap, once per error, produced form,          guardrails.py
+                 no early reveal, length cap)
+   Lesson / Session (existing): hint level, retry or advance, item outcome, next stage, end
+   decisions.jsonl: every turn and every policy decision, with its reason
+-> Reply.text -> TTS
+```
+
+**Who decides.** The server decides stage, time budget, hint level, whether an item is
+achieved, the next item, whether to correct, and the end of the session. The judge
+decides only the verdict, the error id, the reply text and the correction text. The
+request never carries retry counts, caps, Leitner state or the stage order.
+
+**Judge response** (strict JSON, `models.JUDGE_RESPONSE_SCHEMA`, no extra fields):
+`verdict` (correct | surface_error | meaning_error | off_topic), `error_id` (string or
+null), `correction` (string or null), `reply` (string), `confidence` (number).
+
+**Rejection rules** (`validation.py`; any one sends the turn to the rule fallback, and the
+reason codes are logged): malformed JSON, not an object, missing field, unexpected field,
+wrong type, verdict outside the four values, confidence outside [0, 1], empty reply,
+error id or correction on a non-surface verdict, error id not listed for the item,
+correction not one line, correction too long, correction reveals the target form before
+the hint level allows, reply over 2 sentences or 160 characters, a non-correct reply that
+reveals the target form, more than one correction (reply markers plus the correction
+field), and a non-correct verdict on an exact accepted form (`accepted_form_floor`).
+Confidence below `min_confidence` is not a rejection: the verdict becomes meaning_error
+and the ladder advances (unless the transcript is an exact accepted form).
+
+**Other fallbacks.** `JudgeUnavailable` (API error, timeout, refusal after the
+server-side model fallback, `max_tokens`, no text block) goes to the rule fallback too.
+
+**Guardrails** (`guardrails.py`) apply to the judge's reply and to the fallback's: the
+correction cap (`corrections_per_session`, 3), each error id once per session, no
+correction of a form the learner didn't produce (the listed error's pattern must match
+the transcript), no correction of unlisted errors (`allow_unlisted_corrections: false`),
+no early reveal, and the length cap on the line the learner hears. A held-back
+correction is replaced by the encouragement line; the verdict is unchanged.
+
+**Config.** `config/judge.yaml` holds every threshold as `{value, source,
+evidence_scope}` (audited), plus the model, effort and the prompt text. `config/ui/en.yaml`
+holds the fallback lines (one per stage, and per verdict and hint level), the
+encouragement line, the correction markers and the sentence terminators. The API key
+is read from `ANTHROPIC_API_KEY` by the SDK and is never in code, config or logs (the
+decision logger also redacts its value as a last line of defence).
+
+**Commands.**
+
+```bash
+python3 -m pytest                                         # all tests; never calls the API
+python3 -m pedagogy_server.terminal                       # text terminal, stub judge
+python3 -m pedagogy_server.terminal --show-frame --state-dir runs/t1
+python3 -m pedagogy_server.eval_runner                    # eval with the stub judge
+pip install anthropic && export ANTHROPIC_API_KEY=...     # real judge only
+python3 -m pedagogy_server.terminal --judge anthropic
+python3 -m pedagogy_server.eval_runner --judge anthropic --json-out runs/eval.json
+```
+
+## Product decisions made in the server build
+
+61. **The judge is called on every scored guided turn** (the brief's architecture). The
+    rule evaluator runs on every turn too, as the fallback and for the server-side checks.
+62. **Accepted-form floor.** If the transcript matches an accepted form exactly, any
+    verdict other than correct is rejected. This enforces the rubric's "don't penalise
+    accepted alternatives" on the server. Typo-repaired matches don't count (decision 6).
+63. **No early reveal covers the fallback too.** The content's recast corrections
+    ("Say: My name is Ravi.") are held back at levels 0 and 1, where the target form
+    isn't on screen yet, and shown from level 2. Through the server, a level-0 surface
+    error now gets the encouragement line and a retry. `Session` with the rule evaluator
+    alone is unchanged.
+64. **Target form = the model answer without slots.** Accepted alternatives spelled out
+    in full are not caught by the reveal check. Presentation stages (dialogue, useful
+    language) are not counted as disclosure (C1 in the reasoning doc).
+65. **Corrections must be listed errors.** A correction with no error id, or with an id
+    whose pattern doesn't match the transcript, is held back. The verdict stands.
+66. **A correction inside `reply` counts.** Reply text with a correction marker is treated
+    as a correction for the cap, once-per-error and reveal rules.
+67. **Held-back corrections are replaced, not trimmed.** The learner hears the
+    encouragement line (surface errors) or the level's fallback line.
+68. **Low confidence becomes meaning_error with the fallback hint line**, not the judge's
+    reply, because the reply may have praised a wrong answer.
+69. **Judge model** `claude-opus-5-5` at effort `low` (latency inside a spoken turn), with
+    structured outputs (`output_config.format`, JSON schema) and the server-side refusal
+    fallback (`fallbacks: "default"`). Any API, network or timeout failure falls back at
+    once (`max_retries: 0`); a programming error raises instead of hiding behind the
+    fallback. The request shape was checked offline against `anthropic` 2.3.0; no real
+    call has been made.
+75. **Neutral retry prompt when no correction was shown.** `retry_prompt` ("Now say the
+    correct form: ...") assumes a correction. When a surface error got none, the server
+    uses `retry_without_correction` ("Try again: ...") instead. Core `Session` unchanged.
+70. **Correction counters span the lesson**, across guided repeats.
+71. **Reply language** is the UI language. The learner's language is forbidden in replies
+    unless the profile sets `replies_may_use_learner_language` (off: Q8). The request tells
+    the judge; the server does not check the script of the reply yet.
+72. **Presentation stages advance on any utterance**, since a voice client can't press a
+    button. Follow-up answers and roleplay turns make no judge call.
+73. **The eval runs one turn per row through TurnJudge**, the same path as the server, with
+    fresh guardrail state. The ladder isn't run in the eval.
+74. **The eval seed is generated from content** with provenance per row (`eval/README.md`).
+    Slot-bearing accepted forms are not filled, to avoid ungrammatical rows.
+
+**Hypotheses for the eval set** (all in `config/judge.yaml` or `config/ui/en.yaml`):
+`min_confidence` 0.6, `corrections_per_session` 3 (framework says 2 or 3),
+`reply_max_chars` 160, `correction_max_chars` 80, `feedback_max_chars` 220, effort `low`,
+`allow_unlisted_corrections` false, the correction-marker list, and every fallback line.
+
+**Known gaps.** The rules can't tell off_topic from meaning_error (decision 5), so the stub
+eval disagrees on "another item's answer" rows; both advance the ladder. `intro_name`
+accepts "I'm from Dehradun" through `i am {name}`. Every content correction is a recast,
+so with no early reveal a learner can make up to six surface-error turns at levels 0-1
+before any correction is shown (open question: author prompt-style corrections per
+error). Every seed eval row is at hint level 0, so the eval never exercises the cap,
+once-per-error or level-2 correction paths; unit and pipeline tests cover them. Real
+STT/TTS, streaming, barge-in and an HTTP transport are not built.
 
 ## A note on evidence
 

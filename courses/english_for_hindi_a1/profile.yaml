@@ -5,4 +5,7 @@ target_language: en
 learner_language: hi
 cefr_level: A1
 ui_strings: en        # DECISION: English instructions for now; no Hindi UI written yet
+# Whether the LLM judge may use the learner's language (Hindi) in replies. Off until
+# Hindi lines can be native-reviewed (Q8). Read by the pedagogy server only.
+replies_may_use_learner_language: false
 scenarios: [introducing_yourself, ordering_food]

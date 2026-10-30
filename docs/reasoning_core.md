@@ -232,7 +232,9 @@ list at the top.
   The Leitner box does the next-day return. *Not built, by design.*
 - **Q5. Surface-error retries (C5).** Keep corrections in guided recall. Cap at 2–3 per
   session (C6). Show each correction at most once per error type. Skip them only in the
-  roleplay stage. *Not built.*
+  roleplay stage. *Built in the pedagogy server* (`pedagogy_server/guardrails.py`,
+  `corrections_per_session` = 3 and `corrections_per_error_id` = 1 in
+  `config/judge.yaml`). `Session` used alone, without the server, does not cap.
 - **Q6. Double updates on repeat (R7).** Commit the learner model once, after the final
   attempt, and call `finish_session` once at lesson end. *Built:* `commit_outcomes` in
   `guided_practice/app.py`, called from `Lesson._commit_guided`.

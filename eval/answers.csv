@@ -1,0 +1,70 @@
+row_id,course_id,scenario_id,item_id,hint_level,transcript,label_verdict,label_error_id,label_source
+r001,english_for_hindi_a1,introducing_yourself,intro_name,0,My name is Ravi.,correct,,content:model_answer
+r002,english_for_hindi_a1,introducing_yourself,intro_name,0,my name ravi,surface_error,missing_copula,content:common_error
+r003,english_for_hindi_a1,introducing_yourself,intro_name,0,,off_topic,,rule:empty_transcript
+r004,english_for_hindi_a1,introducing_yourself,intro_origin,0,I'm from Dehradun.,correct,,content:model_answer
+r005,english_for_hindi_a1,introducing_yourself,intro_origin,0,i am indian,correct,,content:accepted
+r006,english_for_hindi_a1,introducing_yourself,intro_origin,0,i am american,correct,,content:accepted
+r007,english_for_hindi_a1,introducing_yourself,intro_origin,0,i am british,correct,,content:accepted
+r008,english_for_hindi_a1,introducing_yourself,intro_origin,0,i am nepali,correct,,content:accepted
+r009,english_for_hindi_a1,introducing_yourself,intro_origin,0,i am canadian,correct,,content:accepted
+r010,english_for_hindi_a1,introducing_yourself,intro_origin,0,i am australian,correct,,content:accepted
+r011,english_for_hindi_a1,introducing_yourself,intro_origin,0,i am dehradun,surface_error,missing_from_preposition,content:common_error
+r012,english_for_hindi_a1,introducing_yourself,intro_origin,0,,off_topic,,rule:empty_transcript
+r013,english_for_hindi_a1,introducing_yourself,intro_origin,0,I am a student.,off_topic,,definition:other_item_answer
+r014,english_for_hindi_a1,introducing_yourself,intro_work,0,I am a student.,correct,,content:model_answer
+r015,english_for_hindi_a1,introducing_yourself,intro_work,0,i am studying,correct,,content:accepted
+r016,english_for_hindi_a1,introducing_yourself,intro_work,0,i am working,correct,,content:accepted
+r017,english_for_hindi_a1,introducing_yourself,intro_work,0,i am student,surface_error,dropped_article,content:common_error
+r018,english_for_hindi_a1,introducing_yourself,intro_work,0,i am engineer,surface_error,dropped_article_vowel,content:common_error
+r019,english_for_hindi_a1,introducing_yourself,intro_work,0,i am an engineer,correct,,content:correction_example
+r020,english_for_hindi_a1,introducing_yourself,intro_work,0,,off_topic,,rule:empty_transcript
+r021,english_for_hindi_a1,introducing_yourself,intro_work,0,I like cricket.,off_topic,,definition:other_item_answer
+r022,english_for_hindi_a1,introducing_yourself,intro_interest,0,I like cricket.,correct,,content:model_answer
+r023,english_for_hindi_a1,introducing_yourself,intro_interest,0,i am like cricket,surface_error,wrong_verb_after_i_am,content:common_error
+r024,english_for_hindi_a1,introducing_yourself,intro_interest,0,,off_topic,,rule:empty_transcript
+r025,english_for_hindi_a1,introducing_yourself,intro_interest,0,My name is Ravi.,off_topic,,definition:other_item_answer
+r026,english_for_hindi_a1,ordering_food,food_menu,0,"Can I have the menu, please?",correct,,content:model_answer
+r027,english_for_hindi_a1,ordering_food,food_menu,0,can i have the menu,correct,,content:accepted
+r028,english_for_hindi_a1,ordering_food,food_menu,0,may i have the menu please,correct,,content:accepted
+r029,english_for_hindi_a1,ordering_food,food_menu,0,may i have the menu,correct,,content:accepted
+r030,english_for_hindi_a1,ordering_food,food_menu,0,could i have the menu please,correct,,content:accepted
+r031,english_for_hindi_a1,ordering_food,food_menu,0,could i have the menu,correct,,content:accepted
+r032,english_for_hindi_a1,ordering_food,food_menu,0,can i see the menu please,correct,,content:accepted
+r033,english_for_hindi_a1,ordering_food,food_menu,0,can i see the menu,correct,,content:accepted
+r034,english_for_hindi_a1,ordering_food,food_menu,0,the menu please,correct,,content:accepted
+r035,english_for_hindi_a1,ordering_food,food_menu,0,can i have menu please,surface_error,menu_missing_the,content:common_error
+r036,english_for_hindi_a1,ordering_food,food_menu,0,,off_topic,,rule:empty_transcript
+r037,english_for_hindi_a1,ordering_food,food_menu,0,I agree.,off_topic,,definition:other_item_answer
+r038,english_for_hindi_a1,ordering_food,food_agree,0,I agree.,correct,,content:model_answer
+r039,english_for_hindi_a1,ordering_food,food_agree,0,yes i agree,correct,,content:accepted
+r040,english_for_hindi_a1,ordering_food,food_agree,0,i agree with you,correct,,content:accepted
+r041,english_for_hindi_a1,ordering_food,food_agree,0,i think so too,correct,,content:accepted
+r042,english_for_hindi_a1,ordering_food,food_agree,0,yes,correct,,content:accepted
+r043,english_for_hindi_a1,ordering_food,food_agree,0,yes it is,correct,,content:accepted
+r044,english_for_hindi_a1,ordering_food,food_agree,0,yes it is good,correct,,content:accepted
+r045,english_for_hindi_a1,ordering_food,food_agree,0,yes it is very good,correct,,content:accepted
+r046,english_for_hindi_a1,ordering_food,food_agree,0,i am agree,surface_error,wrong_verb_agree,content:common_error
+r047,english_for_hindi_a1,ordering_food,food_agree,0,,off_topic,,rule:empty_transcript
+r048,english_for_hindi_a1,ordering_food,food_agree,0,How much is it?,off_topic,,definition:other_item_answer
+r049,english_for_hindi_a1,ordering_food,food_ask_price,0,How much is it?,correct,,content:model_answer
+r050,english_for_hindi_a1,ordering_food,food_ask_price,0,how much is this,correct,,content:accepted
+r051,english_for_hindi_a1,ordering_food,food_ask_price,0,how much is the coffee,correct,,content:accepted
+r052,english_for_hindi_a1,ordering_food,food_ask_price,0,how much does it cost,correct,,content:accepted
+r053,english_for_hindi_a1,ordering_food,food_ask_price,0,how much does this cost,correct,,content:accepted
+r054,english_for_hindi_a1,ordering_food,food_ask_price,0,how much does the coffee cost,correct,,content:accepted
+r055,english_for_hindi_a1,ordering_food,food_ask_price,0,what is the price,correct,,content:accepted
+r056,english_for_hindi_a1,ordering_food,food_ask_price,0,what does it cost,correct,,content:accepted
+r057,english_for_hindi_a1,ordering_food,food_ask_price,0,how much it is,surface_error,question_word_order,content:common_error
+r058,english_for_hindi_a1,ordering_food,food_ask_price,0,,off_topic,,rule:empty_transcript
+r059,english_for_hindi_a1,ordering_food,food_ask_price,0,She is vegetarian.,off_topic,,definition:other_item_answer
+r060,english_for_hindi_a1,ordering_food,food_friend_diet,0,She is vegetarian.,correct,,content:model_answer
+r061,english_for_hindi_a1,ordering_food,food_friend_diet,0,she is a vegetarian,correct,,content:accepted
+r062,english_for_hindi_a1,ordering_food,food_friend_diet,0,she does not eat meat,correct,,content:accepted
+r063,english_for_hindi_a1,ordering_food,food_friend_diet,0,my friend is vegetarian,correct,,content:accepted
+r064,english_for_hindi_a1,ordering_food,food_friend_diet,0,my friend is a vegetarian,correct,,content:accepted
+r065,english_for_hindi_a1,ordering_food,food_friend_diet,0,my friend does not eat meat,correct,,content:accepted
+r066,english_for_hindi_a1,ordering_food,food_friend_diet,0,she are vegetarian,surface_error,he_she_agreement,content:common_error
+r067,english_for_hindi_a1,ordering_food,food_friend_diet,0,he is vegetarian,surface_error,he_for_she,content:common_error
+r068,english_for_hindi_a1,ordering_food,food_friend_diet,0,,off_topic,,rule:empty_transcript
+r069,english_for_hindi_a1,ordering_food,food_friend_diet,0,"Can I have the menu, please?",off_topic,,definition:other_item_answer

@@ -38,7 +38,7 @@ from typing import Callable, Optional
 from .config import LanguageConfig, LevelConfig, UIStrings
 from .content import Item, Scenario
 from .course import Course, default_course
-from .evaluator import Evaluator, RuleEvaluator, Verdict
+from .evaluator import EvalResult, Evaluator, RuleEvaluator, Verdict
 from .normalise import normalise
 from .turn_log import JsonlLogger, TurnRecord
 
@@ -146,7 +146,16 @@ class Session:
     def awaiting_follow_up(self) -> bool:
         return self._awaiting_follow_up
 
-    def submit(self, transcript: str, why: Optional[bool] = None) -> TurnResult:
+    @property
+    def hint_level(self) -> int:
+        """The level the next submitted turn will be judged at."""
+        return self._level
+
+    def submit(self, transcript: str, why: Optional[bool] = None,
+               evaluation: Optional[EvalResult] = None) -> TurnResult:
+        """Score one turn. ``evaluation`` lets a caller that judged the turn itself
+        (the pedagogy server) supply the verdict and the feedback to show. The
+        ladder, retries and outcomes are still decided here."""
         if self.done:
             raise RuntimeError("session already complete")
         if not self.started:
@@ -171,7 +180,8 @@ class Session:
                 ended_level=self._submitted_level, outcome=None, independent=None,
             )
 
-        ev = self.evaluator.evaluate(normalise(transcript, self.lang), item)
+        ev = evaluation if evaluation is not None else \
+            self.evaluator.evaluate(normalise(transcript, self.lang), item)
 
         if ev.verdict == Verdict.CORRECT:
             return self._handle_correct(item, transcript, ev)
@@ -186,7 +196,8 @@ class Session:
         level = self._submitted_level
         outcome = "repeated" if level >= MAX_LEVEL else "produced"
         independent = level <= self.level.independent_max_level
-        feedback = self.ui.repeat_ok if outcome == "repeated" else self.ui.correct
+        # An evaluator may supply its own feedback; the rule evaluator leaves it empty.
+        feedback = ev.feedback or (self.ui.repeat_ok if outcome == "repeated" else self.ui.correct)
 
         # This correct turn closes the item: log the outcome on it.
         self._write_log(item, transcript, Verdict.CORRECT, feedback=feedback,
@@ -229,7 +240,7 @@ class Session:
 
     def _handle_meaning(self, item, transcript, ev) -> TurnResult:
         # feedback_shown reflects what the learner actually sees.
-        return self._advance_after_fail(item, transcript, ev.verdict, self.ui.hint)
+        return self._advance_after_fail(item, transcript, ev.verdict, ev.feedback or self.ui.hint)
 
     # --- level / item transitions ------------------------------------------
 

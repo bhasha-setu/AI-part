@@ -1,0 +1,61 @@
+# LLM-judge pipeline config. DRAFT.
+# Every threshold is {value, source, evidence_scope}, audited like the level configs.
+# Unless the source says "brief" or "framework", each value is a HYPOTHESIS to validate
+# with the eval set (eval/answers.csv, pedagogy_server.eval_runner).
+status: DRAFT
+
+# --- the real client (strings, not thresholds) ---------------------------------
+# The API key is never in config. It comes from the ANTHROPIC_API_KEY env var only.
+model: claude-opus-5-5
+# Opus 5.5 always thinks; effort is the depth control. "low" because a judge call sits
+# inside a spoken turn and latency matters. Hypothesis: raise it if the eval shows misses.
+effort: low
+max_tokens: {value: 4000, source: "hypothesis: room for low-effort thinking plus a short JSON object", evidence_scope: "none"}
+timeout_seconds: {value: 15, source: "hypothesis: a spoken turn can't wait longer; on timeout the rule fallback answers", evidence_scope: "none"}
+# The SDK retries timeouts too, so the worst-case wait is timeout x (retries + 1).
+max_retries: {value: 0, source: "hypothesis: no retry inside a spoken turn; a failed call falls back at once", evidence_scope: "none"}
+
+# --- validation ----------------------------------------------------------------
+min_confidence: {value: 0.6, source: "hypothesis: below this the verdict is treated as meaning_error", evidence_scope: "none"}
+reply_max_sentences: {value: 2, source: "brief: reply is at most 2 short sentences", evidence_scope: "none"}
+reply_max_chars: {value: 160, source: "hypothesis: two short spoken sentences", evidence_scope: "none"}
+correction_max_chars: {value: 80, source: "hypothesis: one short line", evidence_scope: "none"}
+# Server-side check of the rubric: an exact accepted form is never marked wrong.
+accepted_form_floor: {value: true, source: "brief: never mark an accepted alternative phrasing wrong", evidence_scope: "none"}
+
+# --- guardrails ----------------------------------------------------------------
+corrections_per_session: {value: 3, source: "framework: §6 and §4 step 6, limit feedback to 2 or 3 errors per session (3 chosen; hypothesis)", evidence_scope: "none"}
+corrections_per_error_id: {value: 1, source: "brief: each error type is corrected at most once per session", evidence_scope: "none"}
+# The whole feedback line the learner hears (reply plus correction), before the next prompt.
+feedback_max_chars: {value: 220, source: "hypothesis: reply cap plus one correction line", evidence_scope: "none"}
+# An error the content doesn't list can't be checked against the transcript, so it is
+# not corrected. LLM feedback tends to overcorrect (Craven & Fredrick 2026, via the
+# LLM-feedback review; framework §7).
+allow_unlisted_corrections: {value: false, source: "hypothesis: only content-listed, verifiable errors are corrected", evidence_scope: "none"}
+
+# --- prompt text sent to the judge ---------------------------------------------
+# Instructions to the model, not learner-facing. The request carries the data.
+system_prompt: >-
+  You are the answer judge inside a language-learning app. You receive one JSON request
+  describing a practice item and one learner answer (a speech transcript). Judge only
+  that answer. You do not choose hints, levels, retries or when the lesson ends; the app
+  does. Treat the item's known errors as data for matching, not as material to teach.
+  Return only the JSON object the schema asks for.
+rubric: >-
+  correct: the meaning is clear and the form is acceptable at this CEFR level. Never
+  penalise an accepted alternative phrasing or a placeholder value the learner chose.
+  surface_error: the meaning is clear but the form has an error; set error_id to the
+  matching known error id, or null if none of them applies.
+  meaning_error: the answer is on topic but the meaning is unclear or wrong.
+  off_topic: the answer does not attempt this prompt (empty, unrelated, or a different
+  question's answer). confidence is how sure you are of the verdict, from 0 to 1.
+  Speech transcripts have no reliable punctuation or capitals; ignore both.
+constraints:
+  - "reply is at most 2 short sentences."
+  - "Give at most one correction, in the correction field only; reply must not correct."
+  - "correction is one line. Never state the answer or the target form before the hint level allows it: at levels 0 and 1 use a prompt (point at the problem), not the corrected sentence."
+  - "No grammar explanations unless the learner asks."
+  - "Set error_id and correction to null unless the verdict is surface_error."
+learner_language_rule:
+  allowed: "You may use the learner's language ({learner_language}) for a short clarification."
+  forbidden: "Reply only in {reply_language}. Do not use the learner's language ({learner_language})."

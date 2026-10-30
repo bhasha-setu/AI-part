@@ -22,6 +22,12 @@ def food():
 
 
 @pytest.fixture
+def course():
+    from guided_practice.course import load_course
+    return load_course("english_for_hindi_a1")
+
+
+@pytest.fixture
 def fixed_clock():
     base = datetime(2025, 1, 6, 9, 0, 0, tzinfo=timezone.utc)
     counter = {"n": 0}

@@ -150,14 +150,20 @@ class Lesson:
             raise RuntimeError(f"stage '{self.current_stage}' does not take continue_()")
         return self._finish_stage("completed", {})
 
-    def submit(self, text: str, why: Optional[bool] = None) -> LessonView:
+    @property
+    def guided_session(self):
+        """The live guided-practice Session, or None outside that stage."""
+        return self._session
+
+    def submit(self, text: str, why: Optional[bool] = None, evaluation=None) -> LessonView:
+        """``evaluation`` is passed to the guided Session (see Session.submit)."""
         self._require_in_progress()
         if self.current_stage == STAGE_ROLEPLAY:
             return self._submit_roleplay(text)
         if self.current_stage != STAGE_GUIDED_PRACTICE:
             raise RuntimeError(f"stage '{self.current_stage}' does not take submit()")
 
-        result = self._session.submit(text, why=why)
+        result = self._session.submit(text, why=why, evaluation=evaluation)
         if not self._session.done:
             return LessonView(
                 stage=STAGE_GUIDED_PRACTICE, expects="answer",

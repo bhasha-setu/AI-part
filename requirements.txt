@@ -1,2 +1,5 @@
 pyyaml>=6.0
 pytest>=7.0
+# Optional, only for the real LLM judge (pedagogy_server.judge.AnthropicJudge):
+#   pip install anthropic
+# Tests and the stub judge do not need it.
