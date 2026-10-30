@@ -6,7 +6,7 @@ The ladder itself is not run: a row is one turn, and verdict agreement doesn't d
 on what the ladder does next.
 
     python3 -m pedagogy_server.eval_runner                    # stub judge (CI-safe)
-    python3 -m pedagogy_server.eval_runner --judge anthropic  # real judge, manual, costs money
+    python3 -m pedagogy_server.eval_runner --judge gemini     # real judge, manual, uses quota
 
 With the stub judge the labels and the judge share the content's rules, so the number
 checks the plumbing, not judgement quality. Real-judge runs are the measurement.
@@ -194,6 +194,7 @@ def format_report(report: EvalReport) -> str:
 
 def main(argv=None) -> int:
     load_dotenv(PROJECT_ROOT / ".env")   # keys only; never printed
+    load_dotenv(PROJECT_ROOT.parent / ".env")   # shared key at the repo root
     parser = argparse.ArgumentParser(description="Run eval/answers.csv through the judge path.")
     parser.add_argument("--answers", default=str(DEFAULT_ANSWERS))
     parser.add_argument("--judge", choices=JUDGE_KINDS, default="stub")

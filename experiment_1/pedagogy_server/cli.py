@@ -180,6 +180,7 @@ def build_parts(args):
 
 def main(argv=None, ask: Callable[[str], str] = input, out: TextIO = sys.stdout) -> int:
     load_dotenv(PROJECT_ROOT / ".env")   # keys only; never printed
+    load_dotenv(PROJECT_ROOT.parent / ".env")   # shared key at the repo root
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--course", default=DEFAULT_COURSE)
     parser.add_argument("--learner", default="me")

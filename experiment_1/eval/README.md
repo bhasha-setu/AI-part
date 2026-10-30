@@ -24,7 +24,7 @@ judge run is the measurement.
 ```bash
 python3 scripts/build_eval_set.py                          # regenerate answers.csv
 python3 -m pedagogy_server.eval_runner                     # stub judge
-python3 -m pedagogy_server.eval_runner --judge anthropic   # real judge: manual, costs money
+python3 -m pedagogy_server.eval_runner --judge gemini      # real judge: manual, uses quota
 ```
 
 A test (`tests/test_server_eval.py`) fails if the committed CSV drifts from the generator.

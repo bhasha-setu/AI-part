@@ -72,7 +72,7 @@ class RecordingRoleplay:
 
 
 # Every key the server may hold. Their values are scrubbed from the log.
-SECRET_VARS = ("ANTHROPIC_API_KEY", GEMINI_KEY_VAR)
+SECRET_VARS = (GEMINI_KEY_VAR,)
 
 
 class DecisionLogger:

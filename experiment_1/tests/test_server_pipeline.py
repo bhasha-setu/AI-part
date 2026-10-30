@@ -194,8 +194,7 @@ def test_handle_needs_start_and_stops_at_the_end(tmp_path):
         srv.handle("again")
 
 
-@pytest.mark.parametrize("var, key", [("ANTHROPIC_API_KEY", "sk-ant-test-1234-not-a-real-key"),
-                                      ("GEMINI_API_KEY", "AIza-test-5678-not-a-real-key")])
+@pytest.mark.parametrize("var, key", [("GEMINI_API_KEY", "AIza-test-5678-not-a-real-key")])
 def test_no_api_key_reaches_the_logs(tmp_path, monkeypatch, var, key):
     monkeypatch.setenv(var, key)
     srv = server(tmp_path)

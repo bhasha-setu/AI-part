@@ -114,6 +114,7 @@ def main(argv=None) -> int:
     model = None
     if not args.offline:
         load_dotenv(PROJECT_ROOT / ".env")
+        load_dotenv(PROJECT_ROOT.parent / ".env")   # shared key at the repo root
         try:
             model = GeminiModel(cfg.model, thinking_level=cfg.thinking_level or None,
                                 timeout_seconds=cfg.timeout_seconds,

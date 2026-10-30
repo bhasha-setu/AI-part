@@ -6,7 +6,7 @@ from a laptop client. Press Enter (or type anything) to continue past a presenta
 stage. ``:frame`` prints the server's frame; ``:quit`` stops.
 
     python3 -m pedagogy_server.terminal                         # stub judge
-    python3 -m pedagogy_server.terminal --judge anthropic       # needs ANTHROPIC_API_KEY
+    python3 -m pedagogy_server.terminal --judge gemini          # needs GEMINI_API_KEY
 """
 
 from __future__ import annotations
@@ -63,6 +63,7 @@ def _stdin_lines(prompt: str):
 
 def main(argv=None) -> int:
     load_dotenv(PROJECT_ROOT / ".env")   # keys only; never printed
+    load_dotenv(PROJECT_ROOT.parent / ".env")   # shared key at the repo root
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--course", default=DEFAULT_COURSE)
     parser.add_argument("--scenario", default=None, help="defaults to the course's first scenario")

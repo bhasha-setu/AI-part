@@ -444,7 +444,7 @@ transcript -> PedagogyServer.handle()
    frame (stage, item, hint level, corrections used)          pipeline.py
    guided practice only:
      JudgeRequest (no policy internals)                       turn_judge.py, models.py
-     LLMJudge: StubJudge | ScriptedJudge | AnthropicJudge     judge.py
+     LLMJudge: StubJudge | ScriptedJudge | GeminiJudge        judge.py
      validate against the strict schema                       validation.py
      on rejection: rule-based fallback                        fallback.py
      guardrails (cap, once per error, produced form,          guardrails.py
@@ -485,10 +485,10 @@ no early reveal, and the length cap on the line the learner hears. A held-back
 correction is replaced by the encouragement line; the verdict is unchanged.
 
 **Config.** `config/judge.yaml` holds every threshold as `{value, source,
-evidence_scope}` (audited), plus the model, effort and the prompt text. `config/ui/en.yaml`
+evidence_scope}` (audited), plus the model and the prompt text. `config/ui/en.yaml`
 holds the fallback lines (one per stage, and per verdict and hint level), the
 encouragement line, the correction markers and the sentence terminators. The API key
-is read from `ANTHROPIC_API_KEY` by the SDK and is never in code, config or logs (the
+is read from `GEMINI_API_KEY` and is never in code, config or logs (the
 decision logger also redacts its value as a last line of defence).
 
 **Commands.**
@@ -498,9 +498,9 @@ python3 -m pytest                                         # all tests; never cal
 python3 -m pedagogy_server.terminal                       # text terminal, stub judge
 python3 -m pedagogy_server.terminal --show-frame --state-dir runs/t1
 python3 -m pedagogy_server.eval_runner                    # eval with the stub judge
-pip install anthropic && export ANTHROPIC_API_KEY=...     # real judge only
-python3 -m pedagogy_server.terminal --judge anthropic
-python3 -m pedagogy_server.eval_runner --judge anthropic --json-out runs/eval.json
+pip install google-genai                                  # real judge only; key in .env
+python3 -m pedagogy_server.terminal --judge gemini
+python3 -m pedagogy_server.eval_runner --judge gemini --json-out runs/eval.json
 ```
 
 ## Product decisions made in the server build
@@ -526,12 +526,9 @@ python3 -m pedagogy_server.eval_runner --judge anthropic --json-out runs/eval.js
     encouragement line (surface errors) or the level's fallback line.
 68. **Low confidence becomes meaning_error with the fallback hint line**, not the judge's
     reply, because the reply may have praised a wrong answer.
-69. **Judge model** `claude-opus-5-5` at effort `low` (latency inside a spoken turn), with
-    structured outputs (`output_config.format`, JSON schema) and the server-side refusal
-    fallback (`fallbacks: "default"`). Any API, network or timeout failure falls back at
-    once (`max_retries: 0`); a programming error raises instead of hiding behind the
-    fallback. The request shape was checked offline against `anthropic` 2.3.0; no real
-    call has been made.
+69. **Judge model** set in `config/judge.yaml`, with structured JSON-schema output. Any
+    API, network or timeout failure falls back to the rules at once; a programming error
+    raises instead of hiding behind the fallback.
 75. **Neutral retry prompt when no correction was shown.** `retry_prompt` ("Now say the
     correct form: ...") assumes a correction. When a surface error got none, the server
     uses `retry_without_correction` ("Try again: ...") instead. Core `Session` unchanged.
@@ -634,7 +631,7 @@ review carry over between runs.
 ## Product decisions made in the mediator build
 
 76. **Gemini is the default real model**, behind the provider-neutral `llm.JSONModel`;
-    `AnthropicJudge` stays. Judge model `gemini-3.5-flash-lite`, chosen on latency. On
+    the only real provider. Judge model `gemini-3.5-flash-lite`, chosen on latency. On
     2026-10-30 it measured 1.3-1.8 s, against 12.8 s for `gemini-3.8-flash` at thinking
     level low. `gemini-flash-lite-latest` at minimal thinking was faster (1.0 s), but it
     marked "can i have menu please" correct.

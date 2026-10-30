@@ -73,6 +73,7 @@ def test_bad_label_is_refused(tmp_path):
 
 
 def test_real_judge_eval_refuses_without_a_key(monkeypatch, capsys):
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    assert main(["--judge", "anthropic", "--limit", "1"]) == 2
-    assert "ANTHROPIC_API_KEY" in capsys.readouterr().err
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.setattr("pedagogy_server.eval_runner.load_dotenv", lambda *a, **k: [])
+    assert main(["--judge", "gemini", "--limit", "1"]) == 2
+    assert "GEMINI_API_KEY" in capsys.readouterr().err

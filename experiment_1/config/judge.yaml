@@ -5,16 +5,8 @@
 status: DRAFT
 
 # --- the real client (strings, not thresholds) ---------------------------------
-# The API key is never in config. It comes from the ANTHROPIC_API_KEY env var only.
-model: claude-opus-5-5
-# Opus 5.5 always thinks; effort is the depth control. "low" because a judge call sits
-# inside a spoken turn and latency matters. Hypothesis: raise it if the eval shows misses.
-effort: low
-max_tokens: {value: 4000, source: "hypothesis: room for low-effort thinking plus a short JSON object", evidence_scope: "none"}
 timeout_seconds: {value: 15, source: "hypothesis: a spoken turn can't wait longer; on timeout the rule fallback answers", evidence_scope: "none"}
-# The SDK retries timeouts too, so the worst-case wait is timeout x (retries + 1).
-max_retries: {value: 0, source: "hypothesis: no retry inside a spoken turn; a failed call falls back at once", evidence_scope: "none"}
-# Gemini: the default real judge (--judge gemini). The key comes from GEMINI_API_KEY only.
+# Gemini: the real judge (--judge gemini). The key comes from GEMINI_API_KEY only.
 # Model chosen for latency inside a spoken turn: measured 1.3-1.8 s on 2026-10-30, against
 # 12.8 s for gemini-3.8-flash at thinking level low. Hypothesis: validate with the eval set.
 gemini_model: gemini-3.5-flash-lite

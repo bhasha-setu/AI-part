@@ -23,11 +23,7 @@ STAGE_LINE_KEYS = ("intro", "model_dialogue", "useful_language", "roleplay", "as
 @dataclass(frozen=True)
 class JudgeConfig:
     status: str
-    model: str
-    effort: str
-    max_tokens: int
     timeout_seconds: float
-    max_retries: int
     min_confidence: float
     reply_max_sentences: int
     reply_max_chars: int
@@ -82,11 +78,7 @@ def load_judge_config(path: str | Path | None = None) -> JudgeConfig:
     v = unwrap(raw)
     return JudgeConfig(
         status=v["status"],
-        model=v["model"],
-        effort=v["effort"],
-        max_tokens=v["max_tokens"],
         timeout_seconds=v["timeout_seconds"],
-        max_retries=v["max_retries"],
         min_confidence=v["min_confidence"],
         reply_max_sentences=v["reply_max_sentences"],
         reply_max_chars=v["reply_max_chars"],
