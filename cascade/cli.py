@@ -28,7 +28,7 @@ import yaml
 
 from .llm import EchoLLM, build_chain
 from .pipeline import CascadePipeline
-from .stt import TypedSTT, load_stt
+from .stt import TypedSTT, load_stt, resolve_stt_config
 from .tts import SilentTTS, load_tts
 from .types import TurnResult
 
@@ -145,8 +145,10 @@ def build_pipeline(args, cfg: dict, *, play: bool = True) -> CascadePipeline:
     if getattr(args, "text", False):
         stt = TypedSTT()
     else:
-        print(f"Loading STT ({args.stt_engine or cfg['stt'].get('engine', 'mlx')}:"
-              f"{args.whisper_model or cfg['stt']['model']})…", flush=True)
+        engine_label, model_label = resolve_stt_config(cfg["stt"],
+                                                       override_engine=args.stt_engine,
+                                                       override_model=args.whisper_model)
+        print(f"Loading STT ({engine_label}:{model_label})…", flush=True)
         stt = load_stt(cfg["stt"], override_model=args.whisper_model,
                        override_engine=args.stt_engine)
     tts_cfg = dict(cfg["tts"], **({"engine": args.tts} if args.tts else {}))

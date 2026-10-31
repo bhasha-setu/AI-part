@@ -301,3 +301,32 @@ def test_english_is_kept_unless_hindi_clearly_wins():
     # spoken Hindi heard as Urdu: Hindi clearly wins once Urdu counts as Hindi
     assert pick_language({"ur": 0.6, "hi": 0.3, "en": 0.1}, ["en", "hi"], **kw) == ("hi", pytest.approx(0.9))
     assert pick_language({"en": 0.9, "hi": 0.05}, ["en", "hi"], **kw)[0] == "en"
+
+
+def test_platform_specific_stt_resolution(monkeypatch):
+    import platform
+    import sys
+    from cascade.stt import is_apple_silicon, resolve_stt_config
+
+    # Test Apple Silicon Darwin arm64
+    monkeypatch.setattr(sys, "platform", "darwin")
+    monkeypatch.setattr(platform, "machine", lambda: "arm64")
+    assert is_apple_silicon() is True
+    cfg = {"engine": "auto", "model": "large-v3-turbo", "cpu_model": "small"}
+    assert resolve_stt_config(cfg) == ("mlx", "large-v3-turbo")
+
+    # Test Linux x86_64
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setattr(platform, "machine", lambda: "x86_64")
+    assert is_apple_silicon() is False
+
+    # auto on Linux -> faster-whisper and cpu_model
+    assert resolve_stt_config(cfg) == ("faster-whisper", "small")
+
+    # config saying 'mlx' on Linux automatically resolves to faster-whisper without crashing
+    cfg_mlx = {"engine": "mlx", "model": "large-v3-turbo", "cpu_model": "small"}
+    assert resolve_stt_config(cfg_mlx) == ("faster-whisper", "small")
+
+    # explicit CLI override on Linux
+    engine, model = resolve_stt_config(cfg_mlx, override_engine="faster-whisper", override_model="base")
+    assert (engine, model) == ("faster-whisper", "base")

@@ -1,4 +1,6 @@
 .env
+env.text.txt
+*.text.txt
 __pycache__/
 *.pyc
 .pytest_cache/

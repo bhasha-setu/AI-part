@@ -12,6 +12,8 @@ as Urdu; the closest allowed language is used instead).
 
 from __future__ import annotations
 
+import platform
+import sys
 import time
 from pathlib import Path
 from typing import Optional, Protocol, Sequence, Union
@@ -91,7 +93,8 @@ class WhisperSTT:
     def __init__(self, model: str = "small", *, device: str = "cpu",
                  compute_type: str = "int8", languages: Sequence[str] = ("en", "hi"),
                  beam_size: int = 1, vad_filter: bool = True, prefer: Optional[str] = None,
-                 switch_share: float = 0.5, aliases: Optional[dict] = None) -> None:
+                 switch_share: float = 0.5, aliases: Optional[dict] = None,
+                 cpu_threads: int = 0, num_workers: int = 1) -> None:
         from faster_whisper import WhisperModel
 
         self.name = f"faster-whisper:{model}"
@@ -99,7 +102,8 @@ class WhisperSTT:
         self.beam_size = beam_size
         self.vad_filter = vad_filter
         self.choice = {"prefer": prefer, "switch_share": switch_share, "aliases": aliases}
-        self._model = WhisperModel(model, device=device, compute_type=compute_type)
+        self._model = WhisperModel(model, device=device, compute_type=compute_type,
+                                   cpu_threads=cpu_threads, num_workers=num_workers)
 
     def _load(self, audio: Audio) -> np.ndarray:
         if isinstance(audio, np.ndarray):
@@ -214,10 +218,43 @@ def timed_transcribe(stt: STT, audio: Audio) -> tuple[Transcript, float]:
     return transcript, (time.perf_counter() - start) * 1000
 
 
+def is_apple_silicon() -> bool:
+    """True if running on Apple Silicon (M-series Mac) where MLX is supported."""
+    return sys.platform == "darwin" and platform.machine() == "arm64"
+
+
+def resolve_stt_config(cfg: dict, *, override_engine: Optional[str] = None,
+                       override_model: Optional[str] = None) -> tuple[str, str]:
+    """Resolve (engine, model) based on the running platform and user configuration."""
+    apple_silicon = is_apple_silicon()
+    raw_engine = override_engine or cfg.get("engine", "auto")
+
+    if raw_engine in ("auto", None):
+        engine = "mlx" if apple_silicon else "faster-whisper"
+    elif raw_engine == "mlx" and not apple_silicon:
+        if override_engine == "mlx":
+            print(f"Note: mlx-whisper is only supported on Apple Silicon (macOS arm64).\n"
+                  f"  Switching to faster-whisper for {platform.system()} ({platform.machine()}).")
+        engine = "faster-whisper"
+    else:
+        engine = raw_engine
+
+    if override_model:
+        model = override_model
+    elif engine == "mlx":
+        model = cfg.get("model", "large-v3-turbo")
+    else:
+        # For faster-whisper (especially on CPU), prefer small for interactive latency
+        model = cfg.get("cpu_model") or cfg.get("cpu_fallback_model") or (
+            cfg.get("model") if cfg.get("model") != "large-v3-turbo" else "small"
+        )
+    return engine, model
+
+
 def load_stt(cfg: dict, *, override_model: Optional[str] = None,
              override_engine: Optional[str] = None) -> STT:
-    engine = override_engine or cfg.get("engine", "mlx")
-    model = override_model or cfg.get("model", "small")
+    engine, model = resolve_stt_config(cfg, override_engine=override_engine,
+                                       override_model=override_model)
     languages = cfg.get("languages", ["en", "hi"])
     choice = {"prefer": cfg.get("prefer_language"), "switch_share": cfg.get("switch_share", 0.5),
               "aliases": cfg.get("language_aliases")}
@@ -226,10 +263,7 @@ def load_stt(cfg: dict, *, override_model: Optional[str] = None,
             return MLXWhisperSTT(model, languages=languages, detect_model=cfg.get("detect_model"),
                                  vad=cfg.get("vad_filter", True), **choice)
         except ImportError:
-            # Usually the project venv isn't active. Say so, and don't start a large
-            # download for the CPU engine: use its small model (~2.5 s per turn) instead.
-            import sys
-
+            # Usually the project venv isn't active on Apple Silicon.
             print(f"mlx-whisper is not installed for {sys.executable}.\n"
                   "  Is the project venv active? (source ../.venv/bin/activate)\n"
                   "  Falling back to faster-whisper 'small' on CPU (slower).")
@@ -237,4 +271,5 @@ def load_stt(cfg: dict, *, override_model: Optional[str] = None,
     return WhisperSTT(model, device=cfg.get("device", "cpu"),
                       compute_type=cfg.get("compute_type", "int8"), languages=languages,
                       beam_size=cfg.get("beam_size", 1), vad_filter=cfg.get("vad_filter", True),
+                      cpu_threads=cfg.get("cpu_threads", 0), num_workers=cfg.get("num_workers", 1),
                       **choice)
